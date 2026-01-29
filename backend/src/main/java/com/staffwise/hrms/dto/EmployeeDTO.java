@@ -27,6 +27,9 @@ public class EmployeeDTO {
     @NotBlank(message = "Last name is required")
     private String lastName;
     
+    // Computed full name for frontend
+    private String fullName;
+    
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     private String email;
@@ -43,6 +46,7 @@ public class EmployeeDTO {
     
     private Double basicSalary;
     private Boolean isActive;
+    private Boolean active; // Alias for frontend compatibility
     private Long managerId;
     private String managerName;
     private String address;

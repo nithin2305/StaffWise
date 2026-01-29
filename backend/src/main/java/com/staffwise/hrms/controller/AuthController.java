@@ -7,6 +7,7 @@ import com.staffwise.hrms.entity.Employee;
 import com.staffwise.hrms.repository.EmployeeRepository;
 import com.staffwise.hrms.security.JwtTokenProvider;
 import com.staffwise.hrms.service.AuditService;
+import com.staffwise.hrms.util.CryptoUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -31,8 +32,13 @@ public class AuthController {
     @PostMapping("/login")
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<AuthResponse>> login(@RequestBody AuthRequest request) {
+        // Decrypt password if it was encrypted on frontend
+        String password = request.isEncrypted() 
+            ? CryptoUtil.decryptPassword(request.getPassword()) 
+            : request.getPassword();
+        
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(request.getEmail(), password)
         );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);

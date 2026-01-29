@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { Observable, tap, catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthResponse, ApiResponse, User, Role } from '../models';
+import { CryptoService } from './crypto.service';
 
 @Injectable({
   providedIn: 'root'
@@ -23,11 +24,18 @@ export class AuthService {
 
   constructor(
     private http: HttpClient,
-    private router: Router
+    private router: Router,
+    private cryptoService: CryptoService
   ) {}
 
   login(email: string, password: string): Observable<ApiResponse<AuthResponse>> {
-    return this.http.post<ApiResponse<AuthResponse>>(`${this.API_URL}/login`, { email, password })
+    // Encrypt password before sending
+    const encryptedPassword = this.cryptoService.encryptPassword(password);
+    return this.http.post<ApiResponse<AuthResponse>>(`${this.API_URL}/login`, { 
+      email, 
+      password: encryptedPassword,
+      encrypted: true 
+    })
       .pipe(
         tap(response => {
           if (response.success && response.data) {
@@ -84,7 +92,7 @@ export class AuthService {
   }
 
   isPayrollChecker(): boolean {
-    return this.hasRole(['PAYROLL_CHECKER', 'SYSTEM_ADMIN']);
+    return this.hasRole(['PAYROLL_CHECKER', 'PAYROLL_ADMIN', 'SYSTEM_ADMIN']);
   }
 
   isPayrollAdmin(): boolean {

@@ -11,6 +11,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
@@ -24,7 +27,9 @@ public class DataInitializer {
     CommandLineRunner initData(
             EmployeeRepository employeeRepository,
             DepartmentRepository departmentRepository,
-            LeaveBalanceRepository leaveBalanceRepository) {
+            LeaveBalanceRepository leaveBalanceRepository,
+            PayrollRunRepository payrollRunRepository,
+            PayrollDetailRepository payrollDetailRepository) {
         
         return args -> {
             // Only initialize if no data exists
@@ -132,6 +137,11 @@ public class DataInitializer {
                     .isActive(true)
                     .build());
 
+            // Create sample processed payroll data for demonstration
+            List<Employee> allEmployees = Arrays.asList(admin, hrUser, payrollChecker, payrollAdmin, employee);
+            createSamplePayroll(payrollRunRepository, payrollDetailRepository, allEmployees, 12, 2025);
+            createSamplePayroll(payrollRunRepository, payrollDetailRepository, allEmployees, 1, 2026);
+
             log.info("Sample data initialization completed");
             log.info("===========================================");
             log.info("Login Credentials:");
@@ -142,6 +152,84 @@ public class DataInitializer {
             log.info("Employee: john.doe@staffwise.com / Employee@123");
             log.info("===========================================");
         };
+    }
+
+    private void createSamplePayroll(PayrollRunRepository payrollRunRepository, 
+                                     PayrollDetailRepository payrollDetailRepository,
+                                     List<Employee> employees, int month, int year) {
+        // Create a processed payroll run
+        PayrollRun payrollRun = payrollRunRepository.save(PayrollRun.builder()
+                .month(month)
+                .year(year)
+                .status(PayrollStatus.PROCESSED)
+                .runDate(LocalDateTime.now())
+                .totalEmployees(employees.size())
+                .computedBy("System")
+                .computedAt(LocalDateTime.now().minusDays(5))
+                .checkedBy("Bob Checker")
+                .checkedAt(LocalDateTime.now().minusDays(4))
+                .authorizedBy("Alice Admin")
+                .authorizedAt(LocalDateTime.now().minusDays(3))
+                .processedBy("Alice Admin")
+                .processedAt(LocalDateTime.now().minusDays(2))
+                .isLocked(true)
+                .build());
+
+        double totalGross = 0;
+        double totalDeductions = 0;
+        double totalNetPay = 0;
+
+        for (Employee emp : employees) {
+            double basicSalary = emp.getBasicSalary() != null ? emp.getBasicSalary() : 50000.0;
+            double hra = basicSalary * 0.4;
+            double transportAllowance = 1600.0;
+            double medicalAllowance = 1250.0;
+            double specialAllowance = basicSalary * 0.1;
+            double grossSalary = basicSalary + hra + transportAllowance + medicalAllowance + specialAllowance;
+            
+            double pfDeduction = basicSalary * 0.12;
+            double taxDeduction = grossSalary > 50000 ? grossSalary * 0.1 : grossSalary * 0.05;
+            double totalDeductionsForEmp = pfDeduction + taxDeduction;
+            double netPay = grossSalary - totalDeductionsForEmp;
+
+            payrollDetailRepository.save(PayrollDetail.builder()
+                    .payrollRun(payrollRun)
+                    .employee(emp)
+                    .basicSalary(basicSalary)
+                    .hra(hra)
+                    .transportAllowance(transportAllowance)
+                    .medicalAllowance(medicalAllowance)
+                    .specialAllowance(specialAllowance)
+                    .overtimePay(0.0)
+                    .bonus(0.0)
+                    .pfDeduction(pfDeduction)
+                    .taxDeduction(taxDeduction)
+                    .insuranceDeduction(0.0)
+                    .loanDeduction(0.0)
+                    .otherDeductions(0.0)
+                    .leaveDeduction(0.0)
+                    .lateDeduction(0.0)
+                    .totalWorkingDays(22)
+                    .daysWorked(22)
+                    .leavesTaken(0.0)
+                    .approvedOvertimeHours(0.0)
+                    .lateCount(0)
+                    .grossSalary(grossSalary)
+                    .totalDeductions(totalDeductionsForEmp)
+                    .netPay(netPay)
+                    .remarks("Payroll processed")
+                    .build());
+
+            totalGross += grossSalary;
+            totalDeductions += totalDeductionsForEmp;
+            totalNetPay += netPay;
+        }
+
+        // Update payroll run totals
+        payrollRun.setTotalGross(totalGross);
+        payrollRun.setTotalDeductions(totalDeductions);
+        payrollRun.setTotalNetPay(totalNetPay);
+        payrollRunRepository.save(payrollRun);
     }
 
     private void createLeaveBalances(LeaveBalanceRepository repository, Employee employee, int year) {

@@ -1,11 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-unauthorized',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   template: `
     <div class="unauthorized-container">
       <div class="unauthorized-card">
@@ -15,10 +16,10 @@ import { RouterLink } from '@angular/router';
         <h1>Access Denied</h1>
         <p>You don't have permission to access this page.</p>
         <p class="hint">Please contact your administrator if you believe this is an error.</p>
-        <a routerLink="/" class="btn btn-primary">
+        <button class="btn btn-primary" (click)="goToHome()">
           <span class="material-icons">home</span>
           Go to Home
-        </a>
+        </button>
       </div>
     </div>
   `,
@@ -76,7 +77,38 @@ import { RouterLink } from '@angular/router';
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
+      cursor: pointer;
+      border: none;
     }
   `]
 })
-export class UnauthorizedComponent {}
+export class UnauthorizedComponent {
+  private router = inject(Router);
+  private authService = inject(AuthService);
+
+  goToHome(): void {
+    const role = this.authService.userRole();
+    
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    switch (role) {
+      case 'SYSTEM_ADMIN':
+        this.router.navigate(['/admin/dashboard']);
+        break;
+      case 'HR':
+        this.router.navigate(['/hr/dashboard']);
+        break;
+      case 'PAYROLL_CHECKER':
+        this.router.navigate(['/payroll/check']);
+        break;
+      case 'PAYROLL_ADMIN':
+        this.router.navigate(['/payroll/authorize']);
+        break;
+      default:
+        this.router.navigate(['/employee/dashboard']);
+    }
+  }
+}

@@ -379,6 +379,8 @@ public class PayrollService {
                 .empCode(detail.getEmployee().getEmpCode())
                 .department(detail.getEmployee().getDepartment() != null ? 
                         detail.getEmployee().getDepartment().getName() : null)
+                .month(detail.getPayrollRun().getMonth())
+                .year(detail.getPayrollRun().getYear())
                 .basicSalary(detail.getBasicSalary())
                 .hra(detail.getHra())
                 .transportAllowance(detail.getTransportAllowance())

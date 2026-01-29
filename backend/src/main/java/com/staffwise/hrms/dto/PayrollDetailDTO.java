@@ -16,6 +16,8 @@ public class PayrollDetailDTO {
     private String employeeName;
     private String empCode;
     private String department;
+    private Integer month;
+    private Integer year;
     
     // Earnings
     private Double basicSalary;
