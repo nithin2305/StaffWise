@@ -105,7 +105,7 @@ class EmployeeControllerTest extends BaseIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.message").value("Checked in successfully"))
-                    .andExpect(jsonPath("$.data.checkIn").isNotEmpty());
+                    .andExpect(jsonPath("$.data.checkInTime").isNotEmpty());
         }
 
         @Test
@@ -122,7 +122,7 @@ class EmployeeControllerTest extends BaseIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.message").value("Checked out successfully"))
-                    .andExpect(jsonPath("$.data.checkOut").isNotEmpty());
+                    .andExpect(jsonPath("$.data.checkOutTime").isNotEmpty());
         }
 
         @Test

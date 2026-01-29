@@ -60,7 +60,7 @@ public class HRController {
     public ResponseEntity<ApiResponse<EmployeeDTO>> updateEmployee(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long id,
-            @Valid @RequestBody EmployeeDTO dto) {
+            @RequestBody EmployeeDTO dto) {
         EmployeeDTO employee = employeeService.updateEmployee(id, dto, userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success("Employee updated successfully", employee));
     }
