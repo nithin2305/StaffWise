@@ -1,0 +1,130 @@
+# ==========================
+# StaffWise HRMS - Git Ignore
+# ==========================
+
+# --------------------------
+# Backend (Spring Boot/Java)
+# --------------------------
+
+# Compiled class files
+backend/target/
+backend/*.class
+
+# Log files
+backend/*.log
+backend/logs/
+
+# Package files
+backend/*.jar
+backend/*.war
+backend/*.ear
+
+# Maven
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+
+# IDE - IntelliJ IDEA
+backend/.idea/
+backend/*.iml
+backend/*.iws
+backend/*.ipr
+
+# IDE - Eclipse
+backend/.classpath
+backend/.project
+backend/.settings/
+backend/.factorypath
+
+# IDE - NetBeans
+backend/nbproject/private/
+backend/nbbuild/
+backend/dist/
+backend/nbdist/
+backend/.nb-gradle/
+
+# --------------------------
+# Frontend (Angular)
+# --------------------------
+
+# Dependencies
+frontend/node_modules/
+
+# Build output
+frontend/dist/
+frontend/tmp/
+frontend/out-tsc/
+
+# IDE - VS Code
+frontend/.vscode/*
+!frontend/.vscode/settings.json
+!frontend/.vscode/tasks.json
+!frontend/.vscode/launch.json
+!frontend/.vscode/extensions.json
+
+# IDE - WebStorm
+frontend/.idea/
+
+# System files
+frontend/.DS_Store
+frontend/Thumbs.db
+
+# Angular cache
+frontend/.angular/
+
+# Profiling files
+frontend/chrome-profiler-events*.json
+
+# Test coverage
+frontend/coverage/
+
+# Environment files (with secrets)
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# npm debug logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# --------------------------
+# Global / Root Level
+# --------------------------
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# H2 Database files
+*.db
+*.mv.db
+*.trace.db
