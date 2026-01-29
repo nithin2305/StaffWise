@@ -129,7 +129,7 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
                       </td>
                       <td>{{ detail.basicSalary | currency:'INR':'symbol':'1.0-0' }}</td>
                       <td>{{ detail.hra | currency:'INR':'symbol':'1.0-0' }}</td>
-                      <td>{{ (detail.transportAllowance || 0) + (detail.medicalAllowance || 0) + (detail.otherAllowances || 0) | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td>{{ (detail.transportAllowance || 0) + (detail.medicalAllowance || 0) + (detail.specialAllowance || 0) | currency:'INR':'symbol':'1.0-0' }}</td>
                       <td>{{ (detail.grossSalary || detail.grossEarnings) | currency:'INR':'symbol':'1.0-0' }}</td>
                       <td>{{ (detail.pfDeduction || detail.pf) | currency:'INR':'symbol':'1.0-0' }}</td>
                       <td>{{ (detail.taxDeduction || detail.tds) | currency:'INR':'symbol':'1.0-0' }}</td>
