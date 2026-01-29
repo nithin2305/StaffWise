@@ -1,292 +1,247 @@
 # StaffWise HRMS
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Angular-18-red?style=flat-square&logo=angular" alt="Angular 18">
-  <img src="https://img.shields.io/badge/Spring%20Boot-3.2-green?style=flat-square&logo=springboot" alt="Spring Boot 3.2">
-  <img src="https://img.shields.io/badge/Java-17-orange?style=flat-square&logo=openjdk" alt="Java 17">
-  <img src="https://img.shields.io/badge/MySQL-8.0-blue?style=flat-square&logo=mysql" alt="MySQL 8.0">
+  <img src="https://img.shields.io/badge/Angular-17-DD0031?style=for-the-badge&logo=angular&logoColor=white" alt="Angular 17"/>
+  <img src="https://img.shields.io/badge/Spring_Boot-3.2.0-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white" alt="Spring Boot 3.2.0"/>
+  <img src="https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 17"/>
+  <img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL"/>
 </p>
 
-**StaffWise** is a comprehensive Role-Based Human Resource Management System (HRMS) platform designed to streamline HR operations, payroll processing, and employee management for organizations of all sizes.
+A comprehensive **Role-Based Human Resource Management System (HRMS)** built with Angular 17 and Spring Boot 3.2. StaffWise provides a complete solution for managing employees, payroll, attendance, leave requests, and more.
 
-## 🚀 Features
+## ✨ Features
 
-### Role-Based Access Control
-The system supports five distinct roles with specific permissions:
+### 🔐 Authentication & Authorization
+- JWT-based authentication with secure token management
+- Role-based access control (RBAC) with 5 distinct roles
+- Encrypted password storage
 
-| Role | Capabilities |
+### 👥 User Roles
+| Role | Description |
 |------|-------------|
-| **System Admin** | Full access to all features, user management, system configuration |
-| **HR** | Employee management, leave approval, attendance tracking, payroll computation |
-| **Payroll Checker** | Review and verify computed payroll, approve or reject with remarks |
-| **Payroll Admin** | Authorize verified payroll, process payments, final approval |
-| **Employee** | View profile, check-in/out, request leaves, view payslips |
+| **System Admin** | Full system access, user management, audit logs, system settings |
+| **HR Manager** | Employee management, leave approvals, attendance tracking |
+| **Payroll Checker** | Review and verify payroll before processing |
+| **Payroll Admin** | Full payroll management, salary processing, disbursement |
+| **Employee** | Personal dashboard, payslips, leave requests, attendance |
 
-### Core Modules
+### 📊 Core Modules
 
-#### 👤 Employee Self-Service
-- Personal profile management
-- Attendance check-in/check-out
+#### Employee Management
+- Complete employee profiles with personal and professional details
+- Department and designation management
+- Document management
+
+#### Attendance Tracking
+- Daily attendance marking (check-in/check-out)
+- Attendance history and reports
+- Late arrival tracking
+
+#### Leave Management
+- Multiple leave types (Annual, Sick, Casual)
 - Leave balance tracking
-- Leave, overtime, and late-coming request submission
-- Payslip viewing and download (PDF)
+- Leave request workflow with approvals
+- Leave history
 
-#### 👥 HR Management
-- Employee onboarding and management
-- Attendance tracking and correction
-- Leave request approval/rejection
-- Payroll computation with automatic calculations
-- Department management
+#### Payroll Processing
+- Monthly payroll computation
+- Multi-level payroll workflow (Compute → Check → Authorize → Process)
+- Salary components (Basic, HRA, Allowances, Deductions)
+- Payslip generation and download (PDF)
+- Payroll history
 
-#### 💰 Payroll Processing (4-Eye Principle)
-The payroll follows a secure multi-step approval workflow:
+#### System Administration
+- Audit logs for all critical actions
+- User role and permission management
+- System settings configuration
 
-1. **Compute** (HR) → Status: `COMPUTED`
-2. **Check** (Payroll Checker) → Status: `CHECKED`
-3. **Authorize** (Payroll Admin) → Status: `AUTHORIZED`
-4. **Process** (Payroll Admin) → Status: `PROCESSED` (Locked)
+## 🛠️ Tech Stack
 
-#### 📊 Dashboard & Analytics
-- Role-specific dashboards
-- Key metrics and statistics
-- Pending requests overview
-- Recent payroll runs
+### Frontend
+- **Angular 17** - Modern web framework with standalone components
+- **TypeScript 5.2** - Type-safe JavaScript
+- **RxJS 7.8** - Reactive programming
+- **CSS3** - Custom styling with responsive design
 
-## 🛡️ Security Features
+### Backend
+- **Spring Boot 3.2.0** - Java framework
+- **Spring Security** - Authentication & authorization
+- **Spring Data JPA** - Database operations
+- **JWT (jjwt 0.12.3)** - Token-based authentication
+- **Lombok** - Boilerplate reduction
+- **Maven** - Build tool
 
-### Authentication & Authorization
-- JWT-based authentication with refresh tokens
-- Role-based access control (RBAC)
-- Password encryption using AES-256-CBC
-- Secure token storage and management
+### Database
+- **MySQL 8.0** - Relational database
 
-### Rate Limiting
-- Login attempt tracking by IP and email
-- Maximum 5 failed attempts before lockout
-- 15-minute lockout duration
-- Protection against brute force attacks
+## 📁 Project Structure
 
-### Audit Trail
-- All actions are logged with timestamps
-- User activity tracking
-- Payroll workflow audit trail
-
-## 🏗️ Architecture
-
-### Backend (Spring Boot)
 ```
-backend/
-├── src/main/java/com/staffwise/hrms/
-│   ├── config/          # Security, CORS, Data initialization
-│   ├── controller/      # REST API endpoints
-│   ├── dto/             # Data Transfer Objects
-│   ├── entity/          # JPA Entities
-│   ├── exception/       # Custom exceptions & handlers
-│   ├── repository/      # JPA Repositories
-│   ├── security/        # JWT, Authentication filters
-│   ├── service/         # Business logic
-│   └── util/            # Utility classes
-└── src/test/            # Integration tests
-```
-
-### Frontend (Angular)
-```
-frontend/
-├── src/app/
-│   ├── core/            # Services, guards, interceptors, models
-│   ├── features/        # Feature modules (auth, employee, hr, payroll, admin)
-│   ├── shared/          # Shared components
-│   └── layout/          # Layout components
-└── src/environments/    # Environment configuration
+StaffWise/
+├── backend/                    # Spring Boot application
+│   ├── src/main/java/com/staffwise/hrms/
+│   │   ├── config/            # Configuration classes
+│   │   ├── controller/        # REST API controllers
+│   │   ├── dto/               # Data Transfer Objects
+│   │   ├── entity/            # JPA entities
+│   │   ├── exception/         # Custom exceptions
+│   │   ├── repository/        # Data repositories
+│   │   ├── security/          # Security configuration
+│   │   ├── service/           # Business logic
+│   │   └── util/              # Utility classes
+│   └── pom.xml
+│
+├── frontend/                   # Angular application
+│   ├── src/app/
+│   │   ├── core/              # Core services, guards, interceptors
+│   │   ├── features/          # Feature modules
+│   │   │   ├── admin/         # System admin features
+│   │   │   ├── auth/          # Login/authentication
+│   │   │   ├── employee/      # Employee dashboard
+│   │   │   ├── hr/            # HR management
+│   │   │   └── payroll/       # Payroll management
+│   │   └── shared/            # Shared components
+│   └── package.json
+│
+└── README.md
 ```
 
-## 🚦 Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
-- Java 17+
-- Node.js 18+
-- MySQL 8.0+
-- Maven 3.8+
+
+- **Java 17** (Eclipse Adoptium recommended)
+- **Node.js 18+** and npm
+- **MySQL 8.0**
+- **Maven 3.8+** (or use included wrapper)
+
+### Database Setup
+
+1. Create a MySQL database:
+```sql
+CREATE DATABASE staffwise;
+```
+
+2. Configure database connection in `backend/src/main/resources/application.properties`:
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/staffwise
+spring.datasource.username=root
+spring.datasource.password=your_password
+```
 
 ### Backend Setup
 
-1. **Configure Database**
-   ```yaml
-   # backend/src/main/resources/application.yml
-   spring:
-     datasource:
-       url: jdbc:mysql://127.0.0.1:3306/staffwise
-       username: root
-       password: your_password
-   ```
+```bash
+# Navigate to backend directory
+cd backend
 
-2. **Run Backend**
-   ```bash
-   cd backend
-   mvn spring-boot:run
-   ```
-   The API will be available at `http://localhost:8080`
+# Run the application (tables are auto-created)
+mvn spring-boot:run
+```
+
+The backend will start on `http://localhost:8080`
 
 ### Frontend Setup
 
-1. **Install Dependencies**
-   ```bash
-   cd frontend
-   npm install
-   ```
+```bash
+# Navigate to frontend directory
+cd frontend
 
-2. **Run Development Server**
-   ```bash
-   npm start
-   ```
-   The app will be available at `http://localhost:4200`
+# Install dependencies
+npm install
 
-## 👥 Demo Accounts
+# Start development server
+npm start
+```
+
+The frontend will start on `http://localhost:4200`
+
+## 🔑 Demo Accounts
+
+The application initializes with sample data including the following test accounts:
 
 | Role | Email | Password |
 |------|-------|----------|
 | System Admin | admin@staffwise.com | Admin@123 |
-| HR | hr@staffwise.com | Hr@123456 |
+| HR Manager | hr@staffwise.com | Hr@123456 |
 | Payroll Checker | checker@staffwise.com | Checker@123 |
 | Payroll Admin | payrolladmin@staffwise.com | PayrollAdmin@123 |
 | Employee | john.doe@staffwise.com | Employee@123 |
 
-## 🧪 Testing
+## 📸 Screenshots
 
-### Running Backend Tests
-```bash
-cd backend
-mvn test
-```
+### Login Page
+Modern login interface with role-based demo account quick access.
 
-### Test Coverage
-The test suite includes:
-- **AuthController Tests**: Login, token refresh, logout, rate limiting
-- **EmployeeController Tests**: Profile, attendance, leave requests, payslips
-- **HRController Tests**: Employee management, leave approval, payroll computation
-- **PayrollController Tests**: Check, authorize, process workflow
+### Employee Dashboard
+Personal dashboard showing attendance, leave balance, and recent payslips.
 
-## 📋 API Endpoints
-
-### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/login` | User login |
-| POST | `/api/auth/refresh` | Refresh token |
-| POST | `/api/auth/logout` | User logout |
-
-### Employee Self-Service
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/employee/profile` | Get profile |
-| PUT | `/api/employee/profile` | Update profile |
-| POST | `/api/employee/attendance/checkin` | Check in |
-| POST | `/api/employee/attendance/checkout` | Check out |
-| GET | `/api/employee/leaves/balance` | Get leave balances |
-| POST | `/api/employee/requests/leave` | Submit leave request |
-| GET | `/api/employee/payslip/my` | Get payslips |
+### Payroll Management
+Complete payroll workflow with computation, verification, and processing.
 
 ### HR Management
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/hr/employees` | List employees |
-| POST | `/api/hr/employees` | Create employee |
-| PUT | `/api/hr/employees/{id}` | Update employee |
-| POST | `/api/hr/requests/{id}/approve` | Approve request |
-| POST | `/api/hr/payroll/compute` | Compute payroll |
+Employee management, leave approvals, and attendance tracking.
 
-### Payroll Workflow
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/payroll/check/pending` | Pending for check |
-| POST | `/api/payroll/check/approve` | Approve check |
-| GET | `/api/payroll/authorize/pending` | Pending authorization |
-| POST | `/api/payroll/authorize/approve` | Authorize payroll |
-| POST | `/api/payroll/process/execute` | Process payment |
+## 🔧 API Endpoints
 
-## 🔄 Payroll Workflow
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
 
-```mermaid
-graph LR
-    A[HR Computes] --> B{Checker Reviews}
-    B -->|Approve| C{Admin Authorizes}
-    B -->|Reject| A
-    C -->|Approve| D[Process Payment]
-    C -->|Reject| A
-    D --> E[Locked/Final]
-```
+### Employee
+- `GET /api/employee/profile` - Get employee profile
+- `GET /api/employee/attendance` - Get attendance records
+- `POST /api/employee/attendance/check-in` - Mark check-in
+- `POST /api/employee/attendance/check-out` - Mark check-out
+- `GET /api/employee/leave-balances` - Get leave balances
+- `POST /api/employee/requests/leave` - Submit leave request
+- `GET /api/employee/payslips` - Get payslip history
 
-## 📝 Payroll Calculations
+### HR
+- `GET /api/hr/employees` - List all employees
+- `POST /api/hr/employees` - Create employee
+- `GET /api/hr/leave-requests` - Get pending leave requests
+- `PUT /api/hr/leave-requests/{id}/approve` - Approve leave
+- `PUT /api/hr/leave-requests/{id}/reject` - Reject leave
 
-### Earnings
-- **Basic Salary**: As defined for employee
-- **HRA**: 40% of basic salary
-- **Transport Allowance**: ₹1,600
-- **Medical Allowance**: ₹1,250
-- **Special Allowance**: 10% of basic salary
-- **Overtime Pay**: Based on approved overtime hours
+### Payroll
+- `POST /api/payroll/compute` - Compute monthly payroll
+- `GET /api/payroll/runs` - List payroll runs
+- `PUT /api/payroll/runs/{id}/check` - Verify payroll (Checker)
+- `PUT /api/payroll/runs/{id}/authorize` - Authorize payroll
+- `PUT /api/payroll/runs/{id}/process` - Process/disburse payroll
 
-### Deductions
-- **PF**: 12% of basic salary
-- **TDS**: 5-10% based on gross salary
-- **Leave Without Pay**: Proportional deduction
-- **Late Deductions**: Based on late count
+### Admin
+- `GET /api/admin/users` - List all users
+- `GET /api/admin/audit-logs` - View audit logs
+- `GET /api/admin/settings` - System settings
 
-## 🔐 Security Considerations
+## 🔒 Security Features
 
-### Password Requirements
-- Minimum 6 characters
-- Encrypted during transmission (AES-256-CBC)
-- Stored using BCrypt hashing
+- **JWT Authentication** - Stateless token-based authentication
+- **Password Encryption** - Secure password storage
+- **Role-Based Access** - Fine-grained permission control
+- **CORS Configuration** - Controlled cross-origin requests
+- **Audit Logging** - Track all critical operations
 
-### Session Management
-- JWT tokens expire after 24 hours
-- Refresh tokens valid for 7 days
-- Secure HTTP-only cookie support ready
+## 📝 License
 
-### Rate Limiting
-```
-Max Attempts: 5
-Lockout Duration: 15 minutes
-Tracked by: IP address and email
-```
-
-## 🛠️ Built With
-
-### Backend
-- **Spring Boot 3.2** - Application framework
-- **Spring Security** - Authentication & authorization
-- **Spring Data JPA** - Database access
-- **MySQL** - Database
-- **JWT (jjwt)** - Token-based authentication
-- **Lombok** - Reduce boilerplate code
-- **MapStruct** - Object mapping
-- **iText 7** - PDF generation
-
-### Frontend
-- **Angular 18** - Frontend framework
-- **Angular Signals** - State management
-- **SCSS** - Styling
-- **Material Icons** - Icon library
-
-## 📄 License
-
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📞 Support
+## 📧 Contact
 
-For support, please open an issue in the GitHub repository.
+For questions or support, please open an issue in the repository.
 
 ---
 
 <p align="center">
-  Made with ❤️ by the StaffWise Team
+  Made with ❤️ using Angular & Spring Boot
 </p>
