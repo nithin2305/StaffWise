@@ -470,8 +470,8 @@ export class LeaveComponent implements OnInit {
     
     this.employeeService.submitLeaveRequest({
       leaveType: formValue.leaveType as LeaveType,
-      startDate: formValue.startDate,
-      endDate: formValue.endDate,
+      fromDate: formValue.startDate,
+      toDate: formValue.endDate,
       reason: formValue.reason
     }).subscribe({
       next: (res) => {

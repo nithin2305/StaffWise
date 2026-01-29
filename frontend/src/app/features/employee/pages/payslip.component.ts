@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EmployeeService } from '../../../core/services/employee.service';
-import { PayrollDetail } from '../../../core/models';
+import { PayrollDetail, ApiResponse } from '../../../core/models';
 
 @Component({
   selector: 'app-payslip',
@@ -69,51 +69,111 @@ import { PayrollDetail } from '../../../core/models';
                 <!-- Earnings -->
                 <div class="payslip-section">
                   <h4>Earnings</h4>
-                  <div class="pay-item">
-                    <span>Basic Salary</span>
-                    <span>{{ selectedPayslip()!.basicSalary | currency:'INR':'symbol':'1.0-0' }}</span>
-                  </div>
-                  <div class="pay-item">
-                    <span>House Rent Allowance (HRA)</span>
-                    <span>{{ selectedPayslip()!.hra | currency:'INR':'symbol':'1.0-0' }}</span>
-                  </div>
-                  <div class="pay-item">
-                    <span>Other Allowances</span>
-                    <span>{{ selectedPayslip()!.otherAllowances | currency:'INR':'symbol':'1.0-0' }}</span>
-                  </div>
-                  <div class="pay-item">
-                    <span>Overtime Pay</span>
-                    <span>{{ selectedPayslip()!.overtimePay | currency:'INR':'symbol':'1.0-0' }}</span>
-                  </div>
+                  @if (hasValue(selectedPayslip()!.basicSalary)) {
+                    <div class="pay-item">
+                      <span>Basic Salary</span>
+                      <span>{{ selectedPayslip()!.basicSalary | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.hra)) {
+                    <div class="pay-item">
+                      <span>House Rent Allowance (HRA)</span>
+                      <span>{{ selectedPayslip()!.hra | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.transportAllowance)) {
+                    <div class="pay-item">
+                      <span>Transport Allowance</span>
+                      <span>{{ selectedPayslip()!.transportAllowance | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.medicalAllowance)) {
+                    <div class="pay-item">
+                      <span>Medical Allowance</span>
+                      <span>{{ selectedPayslip()!.medicalAllowance | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.specialAllowance)) {
+                    <div class="pay-item">
+                      <span>Special Allowance</span>
+                      <span>{{ selectedPayslip()!.specialAllowance | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.otherAllowances)) {
+                    <div class="pay-item">
+                      <span>Other Allowances</span>
+                      <span>{{ selectedPayslip()!.otherAllowances | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.overtimePay)) {
+                    <div class="pay-item">
+                      <span>Overtime Pay</span>
+                      <span>{{ selectedPayslip()!.overtimePay | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.bonus)) {
+                    <div class="pay-item">
+                      <span>Bonus</span>
+                      <span>{{ selectedPayslip()!.bonus | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
                   <div class="pay-item total">
                     <span>Gross Earnings</span>
-                    <span>{{ selectedPayslip()!.grossEarnings | currency:'INR':'symbol':'1.0-0' }}</span>
+                    <span>{{ getGrossEarnings() | currency:'INR':'symbol':'1.0-0' }}</span>
                   </div>
                 </div>
 
                 <!-- Deductions -->
                 <div class="payslip-section">
                   <h4>Deductions</h4>
-                  <div class="pay-item">
-                    <span>Provident Fund (PF)</span>
-                    <span>{{ selectedPayslip()!.pf | currency:'INR':'symbol':'1.0-0' }}</span>
-                  </div>
-                  <div class="pay-item">
-                    <span>Professional Tax</span>
-                    <span>{{ selectedPayslip()!.professionalTax | currency:'INR':'symbol':'1.0-0' }}</span>
-                  </div>
-                  <div class="pay-item">
-                    <span>Tax Deducted at Source (TDS)</span>
-                    <span>{{ selectedPayslip()!.tds | currency:'INR':'symbol':'1.0-0' }}</span>
-                  </div>
-                  <div class="pay-item">
-                    <span>Leave Without Pay (LWP)</span>
-                    <span>{{ selectedPayslip()!.lwpDeduction | currency:'INR':'symbol':'1.0-0' }}</span>
-                  </div>
-                  <div class="pay-item">
-                    <span>Other Deductions</span>
-                    <span>{{ selectedPayslip()!.otherDeductions | currency:'INR':'symbol':'1.0-0' }}</span>
-                  </div>
+                  @if (hasValue(selectedPayslip()!.pf) || hasValue(selectedPayslip()!.pfDeduction)) {
+                    <div class="pay-item">
+                      <span>Provident Fund (PF)</span>
+                      <span>{{ (selectedPayslip()!.pf || selectedPayslip()!.pfDeduction) | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.professionalTax)) {
+                    <div class="pay-item">
+                      <span>Professional Tax</span>
+                      <span>{{ selectedPayslip()!.professionalTax | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.tds) || hasValue(selectedPayslip()!.taxDeduction)) {
+                    <div class="pay-item">
+                      <span>Tax Deducted at Source (TDS)</span>
+                      <span>{{ (selectedPayslip()!.tds || selectedPayslip()!.taxDeduction) | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.insuranceDeduction)) {
+                    <div class="pay-item">
+                      <span>Insurance Deduction</span>
+                      <span>{{ selectedPayslip()!.insuranceDeduction | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.loanDeduction)) {
+                    <div class="pay-item">
+                      <span>Loan Deduction</span>
+                      <span>{{ selectedPayslip()!.loanDeduction | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.leaveDeduction) || hasValue(selectedPayslip()!.lwpDeduction)) {
+                    <div class="pay-item">
+                      <span>Leave Deduction (LWP)</span>
+                      <span>{{ (selectedPayslip()!.leaveDeduction || selectedPayslip()!.lwpDeduction) | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.lateDeduction)) {
+                    <div class="pay-item">
+                      <span>Late Deduction</span>
+                      <span>{{ selectedPayslip()!.lateDeduction | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.otherDeductions)) {
+                    <div class="pay-item">
+                      <span>Other Deductions</span>
+                      <span>{{ selectedPayslip()!.otherDeductions | currency:'INR':'symbol':'1.0-0' }}</span>
+                    </div>
+                  }
                   <div class="pay-item total">
                     <span>Total Deductions</span>
                     <span>{{ selectedPayslip()!.totalDeductions | currency:'INR':'symbol':'1.0-0' }}</span>
@@ -132,22 +192,42 @@ import { PayrollDetail } from '../../../core/models';
               <!-- Additional Info -->
               <div class="additional-info">
                 <div class="info-row">
-                  <div class="info-item">
-                    <span class="label">Working Days</span>
-                    <span class="value">{{ selectedPayslip()!.workingDays }}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="label">Present Days</span>
-                    <span class="value">{{ selectedPayslip()!.presentDays }}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="label">Leave Days</span>
-                    <span class="value">{{ selectedPayslip()!.leaveDays }}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="label">LWP Days</span>
-                    <span class="value">{{ selectedPayslip()!.lwpDays }}</span>
-                  </div>
+                  @if (hasValue(selectedPayslip()!.workingDays) || hasValue(selectedPayslip()!.totalWorkingDays)) {
+                    <div class="info-item">
+                      <span class="label">Working Days</span>
+                      <span class="value">{{ selectedPayslip()!.workingDays || selectedPayslip()!.totalWorkingDays }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.presentDays) || hasValue(selectedPayslip()!.daysWorked)) {
+                    <div class="info-item">
+                      <span class="label">Present Days</span>
+                      <span class="value">{{ selectedPayslip()!.presentDays || selectedPayslip()!.daysWorked }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.leaveDays) || hasValue(selectedPayslip()!.leavesTaken)) {
+                    <div class="info-item">
+                      <span class="label">Leave Days</span>
+                      <span class="value">{{ selectedPayslip()!.leaveDays || selectedPayslip()!.leavesTaken }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.lwpDays)) {
+                    <div class="info-item">
+                      <span class="label">LWP Days</span>
+                      <span class="value">{{ selectedPayslip()!.lwpDays }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.approvedOvertimeHours)) {
+                    <div class="info-item">
+                      <span class="label">Overtime Hours</span>
+                      <span class="value">{{ selectedPayslip()!.approvedOvertimeHours }}</span>
+                    </div>
+                  }
+                  @if (hasValue(selectedPayslip()!.lateCount)) {
+                    <div class="info-item">
+                      <span class="label">Late Count</span>
+                      <span class="value">{{ selectedPayslip()!.lateCount }}</span>
+                    </div>
+                  }
                 </div>
               </div>
             </div>
@@ -486,7 +566,7 @@ export class PayslipComponent implements OnInit {
 
   loadPayslips(): void {
     this.employeeService.getMyPayslips().subscribe({
-      next: (res) => {
+      next: (res: ApiResponse<PayrollDetail[]>) => {
         if (res.success && res.data) {
           this.payslips.set(res.data);
           this.selectCurrentPayslip();
@@ -535,5 +615,15 @@ export class PayslipComponent implements OnInit {
     const months = ['January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'];
     return months[month - 1];
+  }
+
+  hasValue(value: number | undefined | null): boolean {
+    return value !== null && value !== undefined && value !== 0;
+  }
+
+  getGrossEarnings(): number {
+    const p = this.selectedPayslip();
+    if (!p) return 0;
+    return p.grossEarnings || p.grossSalary || 0;
   }
 }

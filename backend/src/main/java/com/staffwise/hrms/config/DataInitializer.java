@@ -142,6 +142,11 @@ public class DataInitializer {
             createSamplePayroll(payrollRunRepository, payrollDetailRepository, allEmployees, 12, 2025);
             createSamplePayroll(payrollRunRepository, payrollDetailRepository, allEmployees, 1, 2026);
 
+            // Create leave balances for all employees
+            for (Employee emp : allEmployees) {
+                createLeaveBalances(leaveBalanceRepository, emp, 2026);
+            }
+
             log.info("Sample data initialization completed");
             log.info("===========================================");
             log.info("Login Credentials:");
