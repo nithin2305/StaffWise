@@ -215,22 +215,52 @@ public class EmployeeService {
     }
 
     private void updateEntityFromDTO(Employee employee, EmployeeDTO dto) {
-        employee.setFirstName(dto.getFirstName());
-        employee.setLastName(dto.getLastName());
-        employee.setPhoneNumber(dto.getPhoneNumber());
-        employee.setDateOfBirth(dto.getDateOfBirth());
-        employee.setDesignation(dto.getDesignation());
-        employee.setBasicSalary(dto.getBasicSalary());
-        employee.setAddress(dto.getAddress());
-        employee.setCity(dto.getCity());
-        employee.setState(dto.getState());
-        employee.setCountry(dto.getCountry());
-        employee.setPostalCode(dto.getPostalCode());
-        employee.setBankAccountNumber(dto.getBankAccountNumber());
-        employee.setBankName(dto.getBankName());
-        employee.setIfscCode(dto.getIfscCode());
-        employee.setPanNumber(dto.getPanNumber());
-
+        // Only update fields that are provided (not null)
+        if (dto.getFirstName() != null) {
+            employee.setFirstName(dto.getFirstName());
+        }
+        if (dto.getLastName() != null) {
+            employee.setLastName(dto.getLastName());
+        }
+        if (dto.getPhoneNumber() != null) {
+            employee.setPhoneNumber(dto.getPhoneNumber());
+        }
+        if (dto.getDateOfBirth() != null) {
+            employee.setDateOfBirth(dto.getDateOfBirth());
+        }
+        if (dto.getDesignation() != null) {
+            employee.setDesignation(dto.getDesignation());
+        }
+        if (dto.getBasicSalary() != null) {
+            employee.setBasicSalary(dto.getBasicSalary());
+        }
+        if (dto.getAddress() != null) {
+            employee.setAddress(dto.getAddress());
+        }
+        if (dto.getCity() != null) {
+            employee.setCity(dto.getCity());
+        }
+        if (dto.getState() != null) {
+            employee.setState(dto.getState());
+        }
+        if (dto.getCountry() != null) {
+            employee.setCountry(dto.getCountry());
+        }
+        if (dto.getPostalCode() != null) {
+            employee.setPostalCode(dto.getPostalCode());
+        }
+        if (dto.getBankAccountNumber() != null) {
+            employee.setBankAccountNumber(dto.getBankAccountNumber());
+        }
+        if (dto.getBankName() != null) {
+            employee.setBankName(dto.getBankName());
+        }
+        if (dto.getIfscCode() != null) {
+            employee.setIfscCode(dto.getIfscCode());
+        }
+        if (dto.getPanNumber() != null) {
+            employee.setPanNumber(dto.getPanNumber());
+        }
         if (dto.getDepartmentId() != null) {
             employee.setDepartment(departmentRepository.findById(dto.getDepartmentId()).orElse(null));
         }

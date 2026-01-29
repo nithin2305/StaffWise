@@ -67,6 +67,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Invalid email or password"));
     }
 
+    @ExceptionHandler(TooManyLoginAttemptsException.class)
+    public ResponseEntity<ApiResponse<Object>> handleTooManyAttempts(TooManyLoginAttemptsException ex) {
+        log.warn("Too many login attempts: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiResponse<Object>> handleIllegalState(IllegalStateException ex) {
         log.error("Illegal state: {}", ex.getMessage());

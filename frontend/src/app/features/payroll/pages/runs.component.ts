@@ -35,7 +35,7 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
                     </td>
                     <td>{{ run.totalEmployees }}</td>
                     <td>{{ run.totalGross | currency:'INR':'symbol':'1.0-0' }}</td>
-                    <td>{{ run.totalNet | currency:'INR':'symbol':'1.0-0' }}</td>
+                    <td>{{ (run.totalNetPay || run.totalNet) | currency:'INR':'symbol':'1.0-0' }}</td>
                     <td>
                       <span class="status-badge" [class]="run.status.toLowerCase()">
                         {{ run.status | titlecase }}
@@ -129,10 +129,10 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
                       </td>
                       <td>{{ detail.basicSalary | currency:'INR':'symbol':'1.0-0' }}</td>
                       <td>{{ detail.hra | currency:'INR':'symbol':'1.0-0' }}</td>
-                      <td>{{ detail.otherAllowances | currency:'INR':'symbol':'1.0-0' }}</td>
-                      <td>{{ detail.grossEarnings | currency:'INR':'symbol':'1.0-0' }}</td>
-                      <td>{{ detail.pf | currency:'INR':'symbol':'1.0-0' }}</td>
-                      <td>{{ detail.tds | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td>{{ (detail.transportAllowance || 0) + (detail.medicalAllowance || 0) + (detail.otherAllowances || 0) | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td>{{ (detail.grossSalary || detail.grossEarnings) | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td>{{ (detail.pfDeduction || detail.pf) | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td>{{ (detail.taxDeduction || detail.tds) | currency:'INR':'symbol':'1.0-0' }}</td>
                       <td>{{ detail.totalDeductions | currency:'INR':'symbol':'1.0-0' }}</td>
                       <td class="net-pay">{{ detail.netPay | currency:'INR':'symbol':'1.0-0' }}</td>
                     </tr>
@@ -144,7 +144,7 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
                     <td colspan="3"></td>
                     <td><strong>{{ selectedRun()!.totalGross | currency:'INR':'symbol':'1.0-0' }}</strong></td>
                     <td colspan="3"></td>
-                    <td class="net-pay"><strong>{{ selectedRun()!.totalNet | currency:'INR':'symbol':'1.0-0' }}</strong></td>
+                    <td class="net-pay"><strong>{{ (selectedRun()!.totalNetPay || selectedRun()!.totalNet) | currency:'INR':'symbol':'1.0-0' }}</strong></td>
                   </tr>
                 </tfoot>
               </table>
