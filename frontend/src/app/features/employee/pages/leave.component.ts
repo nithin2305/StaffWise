@@ -20,17 +20,22 @@ import { LeaveBalance, EmployeeRequest, LeaveType } from '../../../core/models';
                 @switch (balance.leaveType) {
                   @case ('ANNUAL') { <span class="material-icons">wb_sunny</span> }
                   @case ('SICK') { <span class="material-icons">local_hospital</span> }
-                  @case ('PERSONAL') { <span class="material-icons">person</span> }
+                  @case ('CASUAL') { <span class="material-icons">event_available</span> }
+                  @case ('MATERNITY') { <span class="material-icons">child_friendly</span> }
+                  @case ('PATERNITY') { <span class="material-icons">family_restroom</span> }
                   @default { <span class="material-icons">event</span> }
                 }
               </div>
               <div class="balance-info">
                 <span class="balance-type">{{ balance.leaveType | titlecase }}</span>
                 <div class="balance-numbers">
-                  <span class="available">{{ balance.balance }}</span>
-                  <span class="total">/ {{ balance.entitled }}</span>
+                  <span class="available">{{ balance.availableLeaves || 0 }}</span>
+                  <span class="total">/ {{ balance.totalLeaves || 0 }}</span>
                 </div>
-                <span class="used">Used: {{ balance.used }}</span>
+                <span class="used">Used: {{ balance.usedLeaves || 0 }}</span>
+                @if (balance.pendingLeaves && balance.pendingLeaves > 0) {
+                  <span class="pending">Pending: {{ balance.pendingLeaves }}</span>
+                }
               </div>
             </div>
           }
@@ -142,9 +147,9 @@ import { LeaveBalance, EmployeeRequest, LeaveType } from '../../../core/models';
                 @for (request of leaveRequests(); track request.id) {
                   <tr>
                     <td>{{ request.leaveType | titlecase }}</td>
-                    <td>{{ request.startDate | date:'mediumDate' }}</td>
-                    <td>{{ request.endDate | date:'mediumDate' }}</td>
-                    <td>{{ request.days }}</td>
+                    <td>{{ (request.fromDate || request.startDate) | date:'mediumDate' }}</td>
+                    <td>{{ (request.toDate || request.endDate) | date:'mediumDate' }}</td>
+                    <td>{{ request.totalDays || request.days || 0 }}</td>
                     <td class="reason-cell">{{ request.reason }}</td>
                     <td>
                       <span class="status-badge" [class]="request.status.toLowerCase()">
@@ -198,8 +203,11 @@ import { LeaveBalance, EmployeeRequest, LeaveType } from '../../../core/models';
 
       &.annual { border-left-color: #2563eb; }
       &.sick { border-left-color: #dc2626; }
-      &.personal { border-left-color: #059669; }
+      &.casual { border-left-color: #059669; }
+      &.maternity { border-left-color: #ec4899; }
+      &.paternity { border-left-color: #8b5cf6; }
       &.unpaid { border-left-color: #6b7280; }
+      &.compensatory { border-left-color: #f59e0b; }
     }
 
     .balance-icon {
@@ -243,6 +251,12 @@ import { LeaveBalance, EmployeeRequest, LeaveType } from '../../../core/models';
     .used {
       font-size: 0.75rem;
       color: var(--text-light);
+    }
+
+    .pending {
+      font-size: 0.75rem;
+      color: #f59e0b;
+      font-weight: 500;
     }
 
     .card {

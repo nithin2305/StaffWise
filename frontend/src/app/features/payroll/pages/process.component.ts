@@ -25,7 +25,7 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
                   </div>
                   <div class="run-amount">
                     <span class="label">Total Net</span>
-                    <span class="value">{{ run.totalNet | currency:'INR':'symbol':'1.0-0' }}</span>
+                    <span class="value">{{ (run.totalNetPay || run.totalNet) | currency:'INR':'symbol':'1.0-0' }}</span>
                   </div>
                   <span class="material-icons">chevron_right</span>
                 </div>
