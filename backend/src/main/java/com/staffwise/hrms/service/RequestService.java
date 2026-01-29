@@ -261,9 +261,88 @@ public class RequestService {
 
     public List<LeaveBalanceDTO> getLeaveBalances(Long employeeId) {
         int currentYear = LocalDate.now().getYear();
-        return leaveBalanceRepository.findByEmployeeIdAndYear(employeeId, currentYear).stream()
+        List<LeaveBalance> balances = leaveBalanceRepository.findByEmployeeIdAndYear(employeeId, currentYear);
+        
+        // If no balances exist for this employee/year, create default balances
+        if (balances.isEmpty()) {
+            log.info("Creating default leave balances for employee {} year {}", employeeId, currentYear);
+            Employee employee = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+            
+            balances = createDefaultLeaveBalances(employee, currentYear);
+        }
+        
+        return balances.stream()
                 .map(this::mapLeaveBalanceToDTO)
                 .collect(Collectors.toList());
+    }
+    
+    private List<LeaveBalance> createDefaultLeaveBalances(Employee employee, int year) {
+        // Default leave allocations
+        LeaveBalance annualLeave = LeaveBalance.builder()
+                .employee(employee)
+                .leaveType(LeaveType.ANNUAL)
+                .year(year)
+                .totalLeaves(20.0)
+                .usedLeaves(0.0)
+                .pendingLeaves(0.0)
+                .carriedForward(0.0)
+                .build();
+        
+        LeaveBalance sickLeave = LeaveBalance.builder()
+                .employee(employee)
+                .leaveType(LeaveType.SICK)
+                .year(year)
+                .totalLeaves(10.0)
+                .usedLeaves(0.0)
+                .pendingLeaves(0.0)
+                .carriedForward(0.0)
+                .build();
+        
+        LeaveBalance casualLeave = LeaveBalance.builder()
+                .employee(employee)
+                .leaveType(LeaveType.CASUAL)
+                .year(year)
+                .totalLeaves(7.0)
+                .usedLeaves(0.0)
+                .pendingLeaves(0.0)
+                .carriedForward(0.0)
+                .build();
+        
+        LeaveBalance maternityLeave = LeaveBalance.builder()
+                .employee(employee)
+                .leaveType(LeaveType.MATERNITY)
+                .year(year)
+                .totalLeaves(90.0)
+                .usedLeaves(0.0)
+                .pendingLeaves(0.0)
+                .carriedForward(0.0)
+                .build();
+        
+        LeaveBalance paternityLeave = LeaveBalance.builder()
+                .employee(employee)
+                .leaveType(LeaveType.PATERNITY)
+                .year(year)
+                .totalLeaves(15.0)
+                .usedLeaves(0.0)
+                .pendingLeaves(0.0)
+                .carriedForward(0.0)
+                .build();
+        
+        LeaveBalance unpaidLeave = LeaveBalance.builder()
+                .employee(employee)
+                .leaveType(LeaveType.UNPAID)
+                .year(year)
+                .totalLeaves(30.0)
+                .usedLeaves(0.0)
+                .pendingLeaves(0.0)
+                .carriedForward(0.0)
+                .build();
+        
+        List<LeaveBalance> balances = List.of(annualLeave, sickLeave, casualLeave, 
+                                               maternityLeave, paternityLeave, unpaidLeave);
+        
+        return leaveBalanceRepository.saveAll(balances);
     }
 
     // ============ HELPER METHODS ============

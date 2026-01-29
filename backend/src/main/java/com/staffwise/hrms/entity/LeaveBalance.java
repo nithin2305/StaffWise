@@ -25,7 +25,7 @@ public class LeaveBalance extends BaseEntity {
     @Column(name = "leave_type", nullable = false)
     private LeaveType leaveType;
 
-    @Column(nullable = false)
+    @Column(name = "\"YEAR\"", nullable = false)
     private Integer year;
 
     @Column(name = "total_leaves", nullable = false)

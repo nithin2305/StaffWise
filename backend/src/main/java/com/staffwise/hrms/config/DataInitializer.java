@@ -132,12 +132,6 @@ public class DataInitializer {
                     .isActive(true)
                     .build());
 
-            // Initialize leave balances for employees (disabled for H2)
-            // int currentYear = LocalDate.now().getYear();
-            // for (Employee emp : new Employee[]{admin, hrUser, payrollChecker, payrollAdmin, employee}) {
-            //     createLeaveBalances(leaveBalanceRepository, emp, currentYear);
-            // }
-
             log.info("Sample data initialization completed");
             log.info("===========================================");
             log.info("Login Credentials:");

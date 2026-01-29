@@ -32,15 +32,9 @@ import { Attendance } from '../../../core/models';
                 <span class="value">{{ (todayAttendance()?.workingHours || 0) | number:'1.1-1' }} hrs</span>
               </div>
             </div>
-            <div class="action-buttons">
-              <button class="btn btn-success" (click)="checkIn()" [disabled]="checkedIn()">
-                <span class="material-icons">login</span>
-                Check In
-              </button>
-              <button class="btn btn-warning" (click)="checkOut()" [disabled]="!checkedIn()">
-                <span class="material-icons">logout</span>
-                Check Out
-              </button>
+            <div class="status-info">
+              <span class="material-icons">info</span>
+              <span>Attendance is recorded at office entrance</span>
             </div>
           </div>
         </div>
@@ -208,9 +202,18 @@ import { Attendance } from '../../../core/models';
       }
     }
 
-    .action-buttons {
+    .status-info {
       display: flex;
-      gap: 1rem;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      
+      .material-icons {
+        font-size: 1.25rem;
+      }
     }
 
     .filters {
@@ -371,7 +374,6 @@ export class AttendanceComponent implements OnInit {
 
   attendance = signal<Attendance[]>([]);
   todayAttendance = signal<Attendance | null>(null);
-  checkedIn = signal(false);
   
   startDate = '';
   endDate = '';
@@ -407,7 +409,6 @@ export class AttendanceComponent implements OnInit {
           const todayAtt = res.data.find(a => a.attendanceDate === today);
           if (todayAtt) {
             this.todayAttendance.set(todayAtt);
-            this.checkedIn.set(!!todayAtt.checkIn && !todayAtt.checkOut);
           }
         }
       }
@@ -423,31 +424,4 @@ export class AttendanceComponent implements OnInit {
     this.stats.set({ presentDays, absentDays, lateDays, totalHours });
   }
 
-  checkIn(): void {
-    if (this.checkedIn()) return;
-    
-    this.employeeService.checkIn().subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.checkedIn.set(true);
-          this.todayAttendance.set(res.data || null);
-          this.loadAttendance();
-        }
-      }
-    });
-  }
-
-  checkOut(): void {
-    if (!this.checkedIn()) return;
-    
-    this.employeeService.checkOut().subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.checkedIn.set(false);
-          this.todayAttendance.set(res.data || null);
-          this.loadAttendance();
-        }
-      }
-    });
-  }
 }

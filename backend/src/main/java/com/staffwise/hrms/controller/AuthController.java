@@ -14,6 +14,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -28,6 +29,7 @@ public class AuthController {
     private final AuditService auditService;
 
     @PostMapping("/login")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<AuthResponse>> login(@RequestBody AuthRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
@@ -38,7 +40,7 @@ public class AuthController {
         String token = jwtTokenProvider.generateToken(authentication);
         String refreshToken = jwtTokenProvider.generateRefreshToken(request.getEmail());
 
-        Employee employee = employeeRepository.findByEmail(request.getEmail())
+        Employee employee = employeeRepository.findByEmailWithDepartment(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         AuthResponse response = AuthResponse.builder()
@@ -59,6 +61,7 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestHeader("Authorization") String refreshToken) {
         if (refreshToken != null && refreshToken.startsWith("Bearer ")) {
             refreshToken = refreshToken.substring(7);
@@ -72,7 +75,7 @@ public class AuthController {
         String newToken = jwtTokenProvider.generateToken(email);
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(email);
 
-        Employee employee = employeeRepository.findByEmail(email)
+        Employee employee = employeeRepository.findByEmailWithDepartment(email)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         AuthResponse response = AuthResponse.builder()

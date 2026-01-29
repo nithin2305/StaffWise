@@ -21,10 +21,10 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class PayrollRun extends BaseEntity {
 
-    @Column(nullable = false)
+    @Column(name = "\"MONTH\"", nullable = false)
     private Integer month;
 
-    @Column(nullable = false)
+    @Column(name = "\"YEAR\"", nullable = false)
     private Integer year;
 
     @Enumerated(EnumType.STRING)

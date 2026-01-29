@@ -12,14 +12,10 @@ import { Attendance, LeaveBalance, EmployeeRequest } from '../../../core/models'
     <div class="dashboard">
       <!-- Quick Actions -->
       <div class="quick-actions">
-        <div class="action-card checkin" (click)="checkIn()" [class.disabled]="checkedIn()">
-          <span class="material-icons">login</span>
-          <span>Check In</span>
-        </div>
-        <div class="action-card checkout" (click)="checkOut()" [class.disabled]="!checkedIn()">
-          <span class="material-icons">logout</span>
-          <span>Check Out</span>
-        </div>
+        <a routerLink="../attendance" class="action-card attendance">
+          <span class="material-icons">access_time</span>
+          <span>My Attendance</span>
+        </a>
         <a routerLink="../leave" class="action-card leave">
           <span class="material-icons">event_busy</span>
           <span>Apply Leave</span>
@@ -27,6 +23,10 @@ import { Attendance, LeaveBalance, EmployeeRequest } from '../../../core/models'
         <a routerLink="../requests" class="action-card request">
           <span class="material-icons">add_circle</span>
           <span>New Request</span>
+        </a>
+        <a routerLink="../profile" class="action-card profile">
+          <span class="material-icons">person</span>
+          <span>My Profile</span>
         </a>
       </div>
 
@@ -219,12 +219,8 @@ import { Attendance, LeaveBalance, EmployeeRequest } from '../../../core/models'
         font-size: 2rem;
       }
 
-      &.checkin {
+      &.attendance {
         background: linear-gradient(135deg, #10b981, #059669);
-      }
-
-      &.checkout {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
       }
 
       &.leave {
@@ -235,14 +231,13 @@ import { Attendance, LeaveBalance, EmployeeRequest } from '../../../core/models'
         background: linear-gradient(135deg, #3b82f6, #2563eb);
       }
 
+      &.profile {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+      }
+
       &:hover {
         transform: translateY(-3px);
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-      }
-
-      &.disabled {
-        opacity: 0.5;
-        pointer-events: none;
       }
     }
 
@@ -502,7 +497,6 @@ export class EmployeeDashboardComponent implements OnInit {
   leaveBalances = signal<LeaveBalance[]>([]);
   recentRequests = signal<EmployeeRequest[]>([]);
   recentAttendance = signal<Attendance[]>([]);
-  checkedIn = signal(false);
 
   workingHours = signal('0.0 hrs');
   pendingRequests = signal(0);
@@ -524,7 +518,6 @@ export class EmployeeDashboardComponent implements OnInit {
           const todayAtt = res.data.find(a => a.attendanceDate === today);
           if (todayAtt) {
             this.todayAttendance.set(todayAtt);
-            this.checkedIn.set(!!todayAtt.checkIn && !todayAtt.checkOut);
             this.workingHours.set((todayAtt.workingHours || 0).toFixed(1) + ' hrs');
           }
         }
@@ -554,31 +547,4 @@ export class EmployeeDashboardComponent implements OnInit {
     });
   }
 
-  checkIn(): void {
-    if (this.checkedIn()) return;
-    
-    this.employeeService.checkIn().subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.checkedIn.set(true);
-          this.todayAttendance.set(res.data || null);
-          this.loadDashboardData();
-        }
-      }
-    });
-  }
-
-  checkOut(): void {
-    if (!this.checkedIn()) return;
-    
-    this.employeeService.checkOut().subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.checkedIn.set(false);
-          this.todayAttendance.set(res.data || null);
-          this.loadDashboardData();
-        }
-      }
-    });
-  }
 }
