@@ -57,6 +57,16 @@ import { AuthService } from '../../core/services/auth.service';
             }
           </div>
 
+          @if (isRateLimited) {
+            <div class="alert alert-warning">
+              <span class="material-icons">lock_clock</span>
+              <div class="rate-limit-content">
+                <strong>Account Temporarily Locked</strong>
+                <p>{{ rateLimitMessage }}</p>
+              </div>
+            </div>
+          }
+
           @if (errorMessage) {
             <div class="alert alert-error">
               <span class="material-icons">error</span>
@@ -64,7 +74,8 @@ import { AuthService } from '../../core/services/auth.service';
             </div>
           }
 
-          <button type="submit" class="btn btn-primary btn-block" [disabled]="loginForm.invalid || isLoading">
+          <button type="submit" class="btn btn-primary btn-block" 
+                  [disabled]="loginForm.invalid || isLoading || isRateLimited">
             @if (isLoading) {
               <span class="spinner"></span>
               Signing in...
@@ -213,8 +224,8 @@ import { AuthService } from '../../core/services/auth.service';
 
     .alert {
       display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      align-items: flex-start;
+      gap: 0.75rem;
       padding: 1rem;
       border-radius: 8px;
       margin-bottom: 1rem;
@@ -225,8 +236,27 @@ import { AuthService } from '../../core/services/auth.service';
         border: 1px solid #fecaca;
       }
 
+      &.alert-warning {
+        background: #fffbeb;
+        color: #b45309;
+        border: 1px solid #fde68a;
+      }
+
       .material-icons {
-        font-size: 1.25rem;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+      }
+    }
+
+    .rate-limit-content {
+      strong {
+        display: block;
+        margin-bottom: 0.25rem;
+      }
+      p {
+        margin: 0;
+        font-size: 0.875rem;
+        opacity: 0.9;
       }
     }
 
@@ -312,23 +342,32 @@ export class LoginComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
   showPassword = false;
+  isRateLimited = false;
+  rateLimitMessage = '';
 
   ngOnInit(): void {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', Validators.required]
+      password: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
 
   fillDemo(email: string, password: string): void {
     this.loginForm.patchValue({ email, password });
+    this.clearErrors();
+  }
+
+  clearErrors(): void {
+    this.errorMessage = '';
+    this.isRateLimited = false;
+    this.rateLimitMessage = '';
   }
 
   onSubmit(): void {
     if (this.loginForm.invalid) return;
 
     this.isLoading = true;
-    this.errorMessage = '';
+    this.clearErrors();
 
     const { email, password } = this.loginForm.value;
 
@@ -348,7 +387,15 @@ export class LoginComponent implements OnInit {
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = err.error?.message || 'Invalid email or password';
+        
+        // Check for rate limiting (HTTP 429)
+        if (err.status === 429) {
+          this.isRateLimited = true;
+          this.rateLimitMessage = err.error?.message || 
+            'Too many login attempts. Please try again later.';
+        } else {
+          this.errorMessage = err.error?.message || 'Invalid email or password';
+        }
       }
     });
   }

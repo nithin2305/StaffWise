@@ -26,7 +26,7 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
                   </div>
                   <div class="run-amount">
                     <span class="label">Total Net</span>
-                    <span class="value">{{ run.totalNet | currency:'INR':'symbol':'1.0-0' }}</span>
+                    <span class="value">{{ (run.totalNetPay || run.totalNet) | currency:'INR':'symbol':'1.0-0' }}</span>
                   </div>
                   <span class="material-icons">chevron_right</span>
                 </div>
@@ -66,11 +66,11 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
               </div>
               <div class="summary-item">
                 <span class="label">Total Deductions</span>
-                <span class="value">{{ (selectedRun()!.totalGross - selectedRun()!.totalNet) | currency:'INR':'symbol':'1.0-0' }}</span>
+                <span class="value">{{ (selectedRun()!.totalDeductions || (selectedRun()!.totalGross - (selectedRun()!.totalNetPay || selectedRun()!.totalNet))) | currency:'INR':'symbol':'1.0-0' }}</span>
               </div>
               <div class="summary-item highlight">
                 <span class="label">Total Net Pay</span>
-                <span class="value">{{ selectedRun()!.totalNet | currency:'INR':'symbol':'1.0-0' }}</span>
+                <span class="value">{{ (selectedRun()!.totalNetPay || selectedRun()!.totalNet) | currency:'INR':'symbol':'1.0-0' }}</span>
               </div>
             </div>
 
@@ -102,10 +102,10 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
                       </td>
                       <td>{{ detail.basicSalary | currency:'INR':'symbol':'1.0-0' }}</td>
                       <td>{{ detail.hra | currency:'INR':'symbol':'1.0-0' }}</td>
-                      <td>{{ detail.otherAllowances | currency:'INR':'symbol':'1.0-0' }}</td>
-                      <td>{{ detail.grossEarnings | currency:'INR':'symbol':'1.0-0' }}</td>
-                      <td>{{ detail.pf | currency:'INR':'symbol':'1.0-0' }}</td>
-                      <td>{{ detail.tds | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td>{{ (detail.transportAllowance || 0) + (detail.medicalAllowance || 0) + (detail.specialAllowance || 0) | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td>{{ (detail.grossSalary || detail.grossEarnings) | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td>{{ (detail.pfDeduction || detail.pf) | currency:'INR':'symbol':'1.0-0' }}</td>
+                      <td>{{ (detail.taxDeduction || detail.tds) | currency:'INR':'symbol':'1.0-0' }}</td>
                       <td>{{ detail.totalDeductions | currency:'INR':'symbol':'1.0-0' }}</td>
                       <td class="net-pay">{{ detail.netPay | currency:'INR':'symbol':'1.0-0' }}</td>
                       <td>

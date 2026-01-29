@@ -153,7 +153,7 @@ import { PayrollRun } from '../../../core/models';
                   <tr>
                     <td>{{ getMonthName(run.month) }} {{ run.year }}</td>
                     <td>{{ run.totalEmployees }}</td>
-                    <td>{{ run.totalNet | currency:'INR':'symbol':'1.0-0' }}</td>
+                    <td>{{ (run.totalNetPay || run.totalNet) | currency:'INR':'symbol':'1.0-0' }}</td>
                     <td>
                       <span class="status-badge" [class]="run.status.toLowerCase()">
                         {{ run.status | titlecase }}
