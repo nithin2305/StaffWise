@@ -251,8 +251,8 @@ class PayrollControllerTest extends BaseIntegrationTest {
         }
 
         @Test
-        @DisplayName("Should authorize payroll")
-        void shouldAuthorizePayroll() throws Exception {
+        @DisplayName("Should authorize and process payroll in single step")
+        void shouldAuthorizeAndProcessPayroll() throws Exception {
             PayrollRun payrollRun = createPayrollRun(7, 2024, PayrollStatus.COMPUTED);
             payrollRun.setStatus(PayrollStatus.CHECKED);
             payrollRun.setCheckedBy(payrollChecker.getEmail());
@@ -271,8 +271,10 @@ class PayrollControllerTest extends BaseIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.message").value("Payroll authorized"))
-                    .andExpect(jsonPath("$.data.status").value("AUTHORIZED"))
-                    .andExpect(jsonPath("$.data.authorizedBy").value("payrolladmin@test.com"));
+                    .andExpect(jsonPath("$.data.status").value("PROCESSED"))
+                    .andExpect(jsonPath("$.data.authorizedBy").value("payrolladmin@test.com"))
+                    .andExpect(jsonPath("$.data.processedBy").value("payrolladmin@test.com"))
+                    .andExpect(jsonPath("$.data.isLocked").value(true));
         }
 
         @Test
@@ -412,7 +414,7 @@ class PayrollControllerTest extends BaseIntegrationTest {
     class CompletePayrollWorkflowTests {
 
         @Test
-        @DisplayName("Should complete entire payroll workflow")
+        @DisplayName("Should complete entire payroll workflow with 2-step approval")
         void shouldCompleteEntireWorkflow() throws Exception {
             // Step 1: HR computes payroll
             String computeResponse = mockMvc.perform(post("/api/hr/payroll/compute")
@@ -438,7 +440,7 @@ class PayrollControllerTest extends BaseIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.status").value("CHECKED"));
 
-            // Step 3: Payroll Admin authorizes
+            // Step 3: Payroll Admin authorizes and processes in single step
             PayrollActionDTO authAction = PayrollActionDTO.builder()
                     .payrollRunId(payrollId)
                     .remarks("Approved for payment")
@@ -449,22 +451,10 @@ class PayrollControllerTest extends BaseIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(asJsonString(authAction)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.status").value("AUTHORIZED"));
-
-            // Step 4: Payroll Admin processes payment
-            PayrollActionDTO processAction = PayrollActionDTO.builder()
-                    .payrollRunId(payrollId)
-                    .build();
-
-            mockMvc.perform(post("/api/payroll/process/execute")
-                    .header("Authorization", "Bearer " + payrollAdminToken)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(asJsonString(processAction)))
-                    .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.status").value("PROCESSED"))
                     .andExpect(jsonPath("$.data.isLocked").value(true));
 
-            // Step 5: Verify employee can now view payslip
+            // Step 4: Verify employee can now view payslip
             mockMvc.perform(get("/api/employee/payslip/my/2/2023")
                     .header("Authorization", "Bearer " + employeeToken))
                     .andExpect(status().isOk())

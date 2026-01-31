@@ -30,12 +30,8 @@ import { AuthService } from '../../core/services/auth.service';
             }
             @if (authService.isPayrollAdmin()) {
               <a routerLink="/payroll/authorize" routerLinkActive="active">
-                <span class="material-icons">gavel</span>
-                Authorize
-              </a>
-              <a routerLink="/payroll/process" routerLinkActive="active">
-                <span class="material-icons">account_balance</span>
-                Process Payment
+                <span class="material-icons">verified</span>
+                Approve & Process
               </a>
             }
           </div>

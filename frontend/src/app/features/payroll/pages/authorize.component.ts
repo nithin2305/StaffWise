@@ -13,7 +13,7 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
       <!-- Pending Runs -->
       <div class="card">
         <div class="card-header">
-          <h3>Payroll Runs Pending Authorization</h3>
+          <h3>Payroll Runs Pending Final Approval</h3>
         </div>
         <div class="card-body">
           @if (pendingRuns().length > 0) {
@@ -35,7 +35,7 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
           } @else {
             <div class="empty-state">
               <span class="material-icons">check_circle</span>
-              <p>No payroll runs pending authorization</p>
+              <p>No payroll runs pending approval</p>
             </div>
           }
         </div>
@@ -45,19 +45,25 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
       @if (selectedRun()) {
         <div class="card">
           <div class="card-header">
-            <h3>{{ getMonthName(selectedRun()!.month) }} {{ selectedRun()!.year }} - Authorization</h3>
+            <h3>{{ getMonthName(selectedRun()!.month) }} {{ selectedRun()!.year }} - Final Approval & Process</h3>
             <div class="header-actions">
               <button class="btn btn-danger" (click)="openRejectModal()">
                 <span class="material-icons">close</span>
                 Reject
               </button>
-              <button class="btn btn-success" (click)="authorizePayroll()">
-                <span class="material-icons">gavel</span>
-                Authorize
+              <button class="btn btn-success" (click)="authorizePayroll()" [disabled]="processing()">
+                <span class="material-icons">{{ processing() ? 'hourglass_empty' : 'verified' }}</span>
+                {{ processing() ? 'Processing...' : 'Approve & Process Payment' }}
               </button>
             </div>
           </div>
           <div class="card-body">
+            <!-- Info Banner -->
+            <div class="info-banner">
+              <span class="material-icons">info</span>
+              <p>This is the final approval step. Approving will automatically process and credit the payroll to all employees.</p>
+            </div>
+
             <!-- Audit Info -->
             <div class="audit-info">
               <div class="audit-item">
@@ -155,6 +161,24 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
                   Confirm Rejection
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Success Modal -->
+      @if (showSuccessModal()) {
+        <div class="modal-overlay" (click)="closeSuccessModal()">
+          <div class="modal success-modal" (click)="$event.stopPropagation()">
+            <div class="modal-body">
+              <div class="success-icon">
+                <span class="material-icons">check_circle</span>
+              </div>
+              <h3>Payroll Processed Successfully!</h3>
+              <p>Fortnightly payroll has been approved and processed.</p>
+              <p class="amount">K{{ (processedRun()!.totalNetPay || processedRun()!.totalNet) | number:'1.0-0' }}</p>
+              <p class="employees">{{ processedRun()!.totalEmployees }} employees paid</p>
+              <button class="btn btn-primary" (click)="closeSuccessModal()">Done</button>
             </div>
           </div>
         </div>
@@ -340,6 +364,40 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
       color: var(--text-secondary);
       .material-icons { font-size: 3rem; margin-bottom: 0.5rem; color: #10b981; }
     }
+
+    .info-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: #dbeafe;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      border-left: 4px solid #3b82f6;
+
+      .material-icons { color: #3b82f6; }
+      p { margin: 0; color: #1e40af; font-size: 0.875rem; }
+    }
+
+    .success-modal .modal-body {
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .success-icon {
+      .material-icons {
+        font-size: 4rem;
+        color: #10b981;
+      }
+    }
+
+    .success-modal {
+      h3 { margin: 1rem 0 0.5rem; }
+      p { margin: 0.25rem 0; color: var(--text-secondary); }
+      .amount { font-size: 1.5rem; font-weight: 600; color: var(--primary-color); margin-top: 1rem; }
+      .employees { font-size: 0.875rem; }
+      .btn { margin-top: 1.5rem; }
+    }
   `]
 })
 export class AuthorizePayrollComponent implements OnInit {
@@ -349,6 +407,9 @@ export class AuthorizePayrollComponent implements OnInit {
   selectedRun = signal<PayrollRun | null>(null);
   payrollDetails = signal<PayrollDetail[]>([]);
   showRejectModal = signal(false);
+  showSuccessModal = signal(false);
+  processedRun = signal<PayrollRun | null>(null);
+  processing = signal(false);
   rejectionReason = '';
 
   ngOnInit(): void {
@@ -380,13 +441,20 @@ export class AuthorizePayrollComponent implements OnInit {
     const run = this.selectedRun();
     if (!run) return;
 
+    this.processing.set(true);
     this.payrollService.authorizePayroll(run.id!).subscribe({
       next: (res) => {
+        this.processing.set(false);
         if (res.success) {
+          this.processedRun.set(run);
+          this.showSuccessModal.set(true);
           this.selectedRun.set(null);
           this.payrollDetails.set([]);
           this.loadPendingRuns();
         }
+      },
+      error: () => {
+        this.processing.set(false);
       }
     });
   }
@@ -398,6 +466,11 @@ export class AuthorizePayrollComponent implements OnInit {
 
   closeRejectModal(): void {
     this.showRejectModal.set(false);
+  }
+
+  closeSuccessModal(): void {
+    this.showSuccessModal.set(false);
+    this.processedRun.set(null);
   }
 
   rejectPayroll(): void {

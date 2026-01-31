@@ -27,11 +27,6 @@ export const PAYROLL_ROUTES: Routes = [
         canActivate: [payrollAdminGuard]
       },
       {
-        path: 'process',
-        loadComponent: () => import('./pages/process.component').then(m => m.ProcessPayrollComponent),
-        canActivate: [payrollAdminGuard]
-      },
-      {
         path: 'runs',
         loadComponent: () => import('./pages/runs.component').then(m => m.PayrollRunsListComponent)
       }

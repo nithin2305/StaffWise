@@ -28,6 +28,10 @@ export const ADMIN_ROUTES: Routes = [
         loadComponent: () => import('./pages/audit-logs.component').then(m => m.AuditLogsComponent)
       },
       {
+        path: 'tax-config',
+        loadComponent: () => import('./pages/tax-config.component').then(m => m.TaxConfigComponent)
+      },
+      {
         path: 'settings',
         loadComponent: () => import('./pages/settings.component').then(m => m.AdminSettingsComponent)
       }

@@ -37,6 +37,14 @@ import { AuthService } from '../../core/services/auth.service';
           </div>
 
           <div class="nav-section">
+            <span class="section-title">Configuration</span>
+            <a routerLink="/admin/tax-config" routerLinkActive="active">
+              <span class="material-icons">calculate</span>
+              Tax Settings
+            </a>
+          </div>
+
+          <div class="nav-section">
             <span class="section-title">System</span>
             <a routerLink="/admin/audit-logs" routerLinkActive="active">
               <span class="material-icons">history</span>

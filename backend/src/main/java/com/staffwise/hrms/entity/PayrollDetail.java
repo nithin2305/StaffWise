@@ -7,6 +7,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.EqualsAndHashCode;
 
+/**
+ * PayrollDetail entity for Papua New Guinea payroll.
+ * Tracks earnings, Salary and Wages Tax (SWT), and Superannuation.
+ */
 @Entity
 @Table(name = "payroll_details")
 @SequenceGenerator(name = "seq_generator", sequenceName = "payroll_detail_seq", allocationSize = 1)
@@ -25,21 +29,22 @@ public class PayrollDetail extends BaseEntity {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    // Earnings
+    // ============ EARNINGS (in Kina) ============
+    
     @Column(name = "basic_salary", nullable = false)
     private Double basicSalary;
 
-    @Column(name = "hra")
+    @Column(name = "housing_allowance")
     @Builder.Default
-    private Double hra = 0.0;
+    private Double housingAllowance = 0.0;
 
     @Column(name = "transport_allowance")
     @Builder.Default
     private Double transportAllowance = 0.0;
 
-    @Column(name = "medical_allowance")
+    @Column(name = "meal_allowance")
     @Builder.Default
-    private Double medicalAllowance = 0.0;
+    private Double mealAllowance = 0.0;
 
     @Column(name = "special_allowance")
     @Builder.Default
@@ -53,22 +58,52 @@ public class PayrollDetail extends BaseEntity {
     @Builder.Default
     private Double bonus = 0.0;
 
-    // Deductions
-    @Column(name = "pf_deduction")
+    // Leave loading (typically 17.5% of annual leave pay in PNG)
+    @Column(name = "leave_loading")
     @Builder.Default
-    private Double pfDeduction = 0.0;
+    private Double leaveLoading = 0.0;
 
+    // ============ STATUTORY DEDUCTIONS ============
+    
+    // Salary and Wages Tax (SWT) - withheld for IRC
+    @Column(name = "salary_wages_tax")
+    @Builder.Default
+    private Double salaryWagesTax = 0.0;
+
+    // Superannuation - Employee contribution (typically 6%)
+    @Column(name = "super_employee")
+    @Builder.Default
+    private Double superEmployee = 0.0;
+
+    // Superannuation - Employer contribution (typically 8.4%)
+    @Column(name = "super_employer")
+    @Builder.Default
+    private Double superEmployer = 0.0;
+
+    // Total superannuation (employee + employer)
+    @Column(name = "super_total")
+    @Builder.Default
+    private Double superTotal = 0.0;
+
+    // Legacy field for backwards compatibility
     @Column(name = "tax_deduction")
     @Builder.Default
     private Double taxDeduction = 0.0;
 
-    @Column(name = "insurance_deduction")
+    // Legacy PF field (maps to superannuation)
+    @Column(name = "pf_deduction")
     @Builder.Default
-    private Double insuranceDeduction = 0.0;
+    private Double pfDeduction = 0.0;
 
+    // ============ OTHER DEDUCTIONS ============
+    
     @Column(name = "loan_deduction")
     @Builder.Default
     private Double loanDeduction = 0.0;
+
+    @Column(name = "advance_deduction")
+    @Builder.Default
+    private Double advanceDeduction = 0.0;
 
     @Column(name = "other_deductions")
     @Builder.Default
@@ -82,7 +117,25 @@ public class PayrollDetail extends BaseEntity {
     @Builder.Default
     private Double lateDeduction = 0.0;
 
-    // Attendance Data
+    // ============ TAX COMPUTATION DETAILS ============
+    
+    // Gross taxable income (fortnightly)
+    @Column(name = "taxable_income")
+    @Builder.Default
+    private Double taxableIncome = 0.0;
+
+    // Projected annual income for tax calculation
+    @Column(name = "projected_annual_income")
+    @Builder.Default
+    private Double projectedAnnualIncome = 0.0;
+
+    // Whether employee is tax resident
+    @Column(name = "is_tax_resident")
+    @Builder.Default
+    private Boolean isTaxResident = true;
+
+    // ============ ATTENDANCE DATA ============
+    
     @Column(name = "total_working_days")
     private Integer totalWorkingDays;
 
@@ -101,7 +154,8 @@ public class PayrollDetail extends BaseEntity {
     @Builder.Default
     private Integer lateCount = 0;
 
-    // Computed Fields
+    // ============ COMPUTED FIELDS ============
+    
     @Column(name = "gross_salary", nullable = false)
     private Double grossSalary;
 
@@ -111,16 +165,51 @@ public class PayrollDetail extends BaseEntity {
     @Column(name = "net_pay", nullable = false)
     private Double netPay;
 
+    // Cost to Company (gross + employer super)
+    @Column(name = "ctc")
+    @Builder.Default
+    private Double ctc = 0.0;
+
     @Column(length = 500)
     private String remarks;
 
+    // Legacy fields for compatibility
+    @Column(name = "hra")
+    @Builder.Default
+    private Double hra = 0.0;
+
+    @Column(name = "medical_allowance")
+    @Builder.Default
+    private Double medicalAllowance = 0.0;
+
+    @Column(name = "insurance_deduction")
+    @Builder.Default
+    private Double insuranceDeduction = 0.0;
+
+    /**
+     * Calculate all totals for PNG payroll
+     */
     public void calculateTotals() {
-        this.grossSalary = basicSalary + hra + transportAllowance + medicalAllowance 
-                         + specialAllowance + overtimePay + bonus;
+        // Calculate gross salary (all earnings) - use housingAllowance, ignore legacy hra
+        this.grossSalary = basicSalary + housingAllowance + transportAllowance + mealAllowance 
+                         + specialAllowance + overtimePay + bonus + leaveLoading;
         
-        this.totalDeductions = pfDeduction + taxDeduction + insuranceDeduction 
-                             + loanDeduction + otherDeductions + leaveDeduction + lateDeduction;
+        // For backwards compatibility
+        this.taxDeduction = salaryWagesTax;
+        this.pfDeduction = superEmployee;
         
+        // Calculate total superannuation
+        this.superTotal = superEmployee + superEmployer;
+        
+        // Calculate total deductions (employee portion only for net pay)
+        this.totalDeductions = salaryWagesTax + superEmployee + loanDeduction 
+                             + advanceDeduction + otherDeductions + leaveDeduction + lateDeduction;
+        
+        // Calculate net pay (what employee receives)
         this.netPay = grossSalary - totalDeductions;
+        
+        // Calculate CTC (Cost to Company)
+        this.ctc = grossSalary + superEmployer;
     }
 }
+
