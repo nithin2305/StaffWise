@@ -48,14 +48,14 @@ public class PayrollController {
     // ============ PAYROLL CHECKER ENDPOINTS ============
 
     @GetMapping("/check/pending")
-    @PreAuthorize("hasAnyRole('PAYROLL_CHECKER', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('HR', 'PAYROLL_CHECKER', 'PAYROLL_ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<ApiResponse<List<PayrollRunDTO>>> getPayrollsForChecking() {
         List<PayrollRunDTO> runs = payrollService.getPayrollsForChecking();
         return ResponseEntity.ok(ApiResponse.success(runs));
     }
 
     @PostMapping("/check/approve")
-    @PreAuthorize("hasAnyRole('PAYROLL_CHECKER', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('HR', 'PAYROLL_CHECKER', 'PAYROLL_ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<ApiResponse<PayrollRunDTO>> checkPayroll(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody PayrollActionDTO action) {
@@ -64,7 +64,7 @@ public class PayrollController {
     }
 
     @PostMapping("/check/reject")
-    @PreAuthorize("hasAnyRole('PAYROLL_CHECKER', 'SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('HR', 'PAYROLL_CHECKER', 'PAYROLL_ADMIN', 'SYSTEM_ADMIN')")
     public ResponseEntity<ApiResponse<PayrollRunDTO>> rejectPayrollAtCheck(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody PayrollActionDTO action) {
@@ -72,7 +72,7 @@ public class PayrollController {
         return ResponseEntity.ok(ApiResponse.success("Payroll rejected", run));
     }
 
-    // ============ PAYROLL ADMIN ENDPOINTS ============
+    // ============ PAYROLL ADMIN ENDPOINTS (Authorize & Credit - Combined) ============
 
     @GetMapping("/authorize/pending")
     @PreAuthorize("hasAnyRole('PAYROLL_ADMIN', 'SYSTEM_ADMIN')")
@@ -87,7 +87,7 @@ public class PayrollController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody PayrollActionDTO action) {
         PayrollRunDTO run = payrollService.authorizePayroll(action, userDetails.getUsername());
-        return ResponseEntity.ok(ApiResponse.success("Payroll authorized", run));
+        return ResponseEntity.ok(ApiResponse.success("Payroll authorized and credited successfully", run));
     }
 
     @PostMapping("/authorize/reject")

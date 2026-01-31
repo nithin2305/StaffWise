@@ -159,10 +159,10 @@ public class HRController {
     @PostMapping("/payroll/compute")
     public ResponseEntity<ApiResponse<PayrollRunDTO>> computePayroll(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam int month,
+            @RequestParam int fortnight,
             @RequestParam int year) {
-        PayrollRunDTO payrollRun = payrollService.computePayroll(month, year, userDetails.getUsername());
-        return ResponseEntity.ok(ApiResponse.success("Payroll computed successfully", payrollRun));
+        PayrollRunDTO payrollRun = payrollService.computePayroll(fortnight, year, userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Payroll computed successfully for Fortnight " + fortnight, payrollRun));
     }
 
     // ============ PAYROLL VIEW (READ-ONLY) ============

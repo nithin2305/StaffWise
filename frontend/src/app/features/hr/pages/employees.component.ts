@@ -165,8 +165,8 @@ import { Employee } from '../../../core/models';
                     <input type="date" formControlName="dateOfJoining">
                   </div>
                   <div class="form-group">
-                    <label>Basic Salary *</label>
-                    <input type="number" formControlName="basicSalary">
+                    <label>Annual Basic Salary (K) *</label>
+                    <input type="number" formControlName="basicSalary" placeholder="e.g., 180000">
                   </div>
                   <div class="form-group">
                     <label>Bank Name</label>

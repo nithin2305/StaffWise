@@ -31,12 +31,34 @@ export class HrService {
     return this.http.get<ApiResponse<Employee>>(`${this.API_URL}/employees/${id}`);
   }
 
-  createEmployee(data: Partial<Employee> & { password?: string }): Observable<ApiResponse<Employee>> {
-    return this.http.post<ApiResponse<Employee>>(`${this.API_URL}/employees`, data);
+  createEmployee(data: Partial<Employee> & { password?: string; fullName?: string }): Observable<ApiResponse<Employee>> {
+    const payload = this.prepareEmployeePayload(data);
+    return this.http.post<ApiResponse<Employee>>(`${this.API_URL}/employees`, payload);
   }
 
-  updateEmployee(id: number, data: Partial<Employee>): Observable<ApiResponse<Employee>> {
-    return this.http.put<ApiResponse<Employee>>(`${this.API_URL}/employees/${id}`, data);
+  updateEmployee(id: number, data: Partial<Employee> & { fullName?: string }): Observable<ApiResponse<Employee>> {
+    const payload = this.prepareEmployeePayload(data);
+    return this.http.put<ApiResponse<Employee>>(`${this.API_URL}/employees/${id}`, payload);
+  }
+
+  private prepareEmployeePayload(data: Partial<Employee> & { fullName?: string; phone?: string }): any {
+    const payload: any = { ...data };
+    
+    // Split fullName into firstName and lastName
+    if (data.fullName && !data.firstName && !data.lastName) {
+      const nameParts = data.fullName.trim().split(/\s+/);
+      payload.firstName = nameParts[0] || '';
+      payload.lastName = nameParts.slice(1).join(' ') || nameParts[0] || '';
+      delete payload.fullName;
+    }
+    
+    // Map phone to phoneNumber if needed
+    if (data.phone && !payload.phoneNumber) {
+      payload.phoneNumber = data.phone;
+      delete payload.phone;
+    }
+    
+    return payload;
   }
 
   deactivateEmployee(id: number): Observable<ApiResponse<void>> {
@@ -92,9 +114,9 @@ export class HrService {
   }
 
   // Payroll
-  computePayroll(month: number, year: number): Observable<ApiResponse<PayrollRun>> {
+  computePayroll(fortnight: number, year: number): Observable<ApiResponse<PayrollRun>> {
     const params = new HttpParams()
-      .set('month', month.toString())
+      .set('fortnight', fortnight.toString())
       .set('year', year.toString());
     return this.http.post<ApiResponse<PayrollRun>>(`${this.API_URL}/payroll/compute`, {}, { params });
   }

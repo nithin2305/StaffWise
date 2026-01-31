@@ -91,11 +91,33 @@ export class AuthService {
     return this.hasRole(['HR', 'SYSTEM_ADMIN']);
   }
 
+  // HR can compute and check payroll (combined role)
   isPayrollChecker(): boolean {
-    return this.hasRole(['PAYROLL_CHECKER', 'PAYROLL_ADMIN', 'SYSTEM_ADMIN']);
+    return this.hasRole(['HR', 'PAYROLL_CHECKER', 'PAYROLL_ADMIN', 'SYSTEM_ADMIN']);
   }
 
+  // Payroll Admin can authorize and process payroll (combined role)
   isPayrollAdmin(): boolean {
+    return this.hasRole(['PAYROLL_ADMIN', 'SYSTEM_ADMIN']);
+  }
+
+  // Can compute payroll (HR role)
+  canComputePayroll(): boolean {
+    return this.hasRole(['HR', 'PAYROLL_CHECKER', 'PAYROLL_ADMIN', 'SYSTEM_ADMIN']);
+  }
+
+  // Can check/verify payroll (HR role - same as compute)
+  canCheckPayroll(): boolean {
+    return this.hasRole(['HR', 'PAYROLL_CHECKER', 'PAYROLL_ADMIN', 'SYSTEM_ADMIN']);
+  }
+
+  // Can authorize payroll (Payroll Admin role)
+  canAuthorizePayroll(): boolean {
+    return this.hasRole(['PAYROLL_ADMIN', 'SYSTEM_ADMIN']);
+  }
+
+  // Can process payroll (Payroll Admin role - same as authorize)
+  canProcessPayroll(): boolean {
     return this.hasRole(['PAYROLL_ADMIN', 'SYSTEM_ADMIN']);
   }
 

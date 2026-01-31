@@ -16,6 +16,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,31 +31,37 @@ public class PayrollService {
     private final EmployeeRepository employeeRepository;
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRequestRepository requestRepository;
+    private final TaxConfigurationRepository taxConfigurationRepository;
+    private final TaxSlabRepository taxSlabRepository;
+    private final PayrollConfigurationRepository payrollConfigurationRepository;
     private final AuditService auditService;
 
-    // Payroll computation constants - adjusted for fortnightly pay
-    private static final double HRA_PERCENTAGE = 0.40;
-    private static final double TRANSPORT_ALLOWANCE = 800.0;  // Fortnightly (half of monthly)
-    private static final double MEDICAL_ALLOWANCE = 625.0;    // Fortnightly (half of monthly)
-    private static final double PF_PERCENTAGE = 0.12;
-    private static final double TAX_PERCENTAGE = 0.10;
-    private static final double OVERTIME_RATE_MULTIPLIER = 1.5;
-    private static final double LATE_DEDUCTION_PER_OCCURRENCE = 100.0;  // Fortnightly rate
+    // Default constants only used as fallback when no configuration exists
+    private static final int DEFAULT_FORTNIGHTS_PER_YEAR = 26;
+    private static final int DEFAULT_WORKING_DAYS_PER_FORTNIGHT = 10;
+    private static final double DEFAULT_STANDARD_HOURS_PER_DAY = 8.0;
+    private static final double DEFAULT_OVERTIME_MULTIPLIER = 1.5;
+    private static final double DEFAULT_LATE_DEDUCTION = 50.0;
     private static final int DAYS_IN_FORTNIGHT = 14;
-    private static final int FORTNIGHTS_PER_YEAR = 26;
+    
+    // Tax fallback rates
+    private static final double DEFAULT_SUPER_EMPLOYEE_PERCENTAGE = 0.06;
+    private static final double DEFAULT_TAX_PERCENTAGE = 0.10;
 
     // ============ PAYROLL COMPUTATION (HR) - FORTNIGHTLY ============
 
     /**
      * Compute fortnightly payroll.
-     * @param fortnight The fortnight number (1-26)
-     * @param year The year
-     * @param computedBy The user who computed the payroll
+     * All rates and configurations come from database - NO HARDCODING!
      */
     public PayrollRunDTO computePayroll(int fortnight, int year, String computedBy) {
+        // Get payroll configuration
+        PayrollConfiguration payrollConfig = getActivePayrollConfiguration(LocalDate.of(year, 1, 1));
+        int fortnightsPerYear = payrollConfig != null ? payrollConfig.getFortnightsPerYear() : DEFAULT_FORTNIGHTS_PER_YEAR;
+        
         // Validate fortnight
-        if (fortnight < 1 || fortnight > FORTNIGHTS_PER_YEAR) {
-            throw new IllegalArgumentException("Fortnight must be between 1 and " + FORTNIGHTS_PER_YEAR);
+        if (fortnight < 1 || fortnight > fortnightsPerYear) {
+            throw new IllegalArgumentException("Fortnight must be between 1 and " + fortnightsPerYear);
         }
 
         // Check if payroll already exists for this fortnight
@@ -67,6 +74,18 @@ public class PayrollService {
         LocalDate periodStart = periodDates[0];
         LocalDate periodEnd = periodDates[1];
 
+        // Fetch active tax configuration for this period
+        TaxConfiguration taxConfig = getActiveTaxConfiguration(periodStart);
+        if (taxConfig != null) {
+            log.info("Using tax configuration: {} (Financial Year {})", 
+                    taxConfig.getDescription(), taxConfig.getFinancialYear());
+        }
+        
+        if (payrollConfig != null) {
+            log.info("Using payroll configuration: {} (Overtime multiplier: {}x)", 
+                    payrollConfig.getConfigName(), payrollConfig.getOvertimeRateMultiplier());
+        }
+
         List<Employee> activeEmployees = employeeRepository.findByIsActiveTrue();
         
         PayrollRun payrollRun = PayrollRun.builder()
@@ -74,11 +93,13 @@ public class PayrollService {
                 .year(year)
                 .periodStart(periodStart)
                 .periodEnd(periodEnd)
-                .status(PayrollStatus.COMPUTED)
+                .status(PayrollStatus.CHECKED)  // Auto-checked after computation (Step 1 complete)
                 .runDate(LocalDateTime.now())
                 .totalEmployees(activeEmployees.size())
                 .computedBy(computedBy)
                 .computedAt(LocalDateTime.now())
+                .checkedBy(computedBy)  // Same person who computed
+                .checkedAt(LocalDateTime.now())
                 .build();
 
         payrollRun = payrollRunRepository.save(payrollRun);
@@ -91,7 +112,7 @@ public class PayrollService {
 
         for (Employee employee : activeEmployees) {
             PayrollDetail detail = computeEmployeePayroll(employee, payrollRun, fortnight, year, 
-                    totalWorkingDays, periodStart, periodEnd);
+                    totalWorkingDays, periodStart, periodEnd, taxConfig, payrollConfig);
             
             totalGross += detail.getGrossSalary();
             totalDeductions += detail.getTotalDeductions();
@@ -104,10 +125,10 @@ public class PayrollService {
 
         PayrollRun saved = payrollRunRepository.save(payrollRun);
         
-        auditService.logAction("PayrollRun", saved.getId(), "COMPUTE", computedBy, 
-                null, "Computed fortnightly payroll for Fortnight " + fortnight + ", " + year);
+        auditService.logAction("PayrollRun", saved.getId(), "COMPUTE_AND_CHECK", computedBy, 
+                null, "Computed and verified payroll for Fortnight " + fortnight + ", " + year);
         
-        log.info("Fortnightly payroll computed for Fortnight {}/{} by {} - Total Net Pay: {}", 
+        log.info("Fortnightly payroll computed and checked for Fortnight {}/{} by {} - Total Net Pay: {}", 
                 fortnight, year, computedBy, totalNetPay);
         return mapToDTO(saved);
     }
@@ -146,21 +167,132 @@ public class PayrollService {
         return workingDays;
     }
 
+    // ============ TAX CALCULATION METHODS ============
+
+    /**
+     * Get active tax configuration for the payroll period.
+     * Falls back to default rates if no configuration found.
+     */
+    private TaxConfiguration getActiveTaxConfiguration(LocalDate periodDate) {
+        return taxConfigurationRepository.findActiveConfigurationForDate(periodDate)
+                .orElseGet(() -> {
+                    log.warn("No active tax configuration found for date {}. Using default rates.", periodDate);
+                    return null;
+                });
+    }
+
+    /**
+     * Calculate Salary and Wages Tax (SWT) using PNG progressive tax slabs.
+     * Converts annual salary to fortnightly tax amount.
+     */
+    private double calculateSWT(double fortnightlyTaxableIncome, TaxConfiguration taxConfig, 
+                                PayrollConfiguration payrollConfig, boolean isResident) {
+        int fortnightsPerYear = payrollConfig != null ? payrollConfig.getFortnightsPerYear() : DEFAULT_FORTNIGHTS_PER_YEAR;
+        
+        if (taxConfig == null) {
+            log.debug("Using default flat tax rate: {}", DEFAULT_TAX_PERCENTAGE);
+            return fortnightlyTaxableIncome * DEFAULT_TAX_PERCENTAGE;
+        }
+
+        // Convert fortnightly income to annual for slab calculation
+        double annualTaxableIncome = fortnightlyTaxableIncome * fortnightsPerYear;
+
+        // Get tax slabs for resident/non-resident
+        List<TaxSlab> slabs = taxSlabRepository.findByConfigurationAndRegime(taxConfig.getId(), isResident);
+        
+        if (slabs == null || slabs.isEmpty()) {
+            log.warn("No tax slabs found for configuration {}. Using default rate.", taxConfig.getId());
+            return fortnightlyTaxableIncome * DEFAULT_TAX_PERCENTAGE;
+        }
+
+        slabs.sort(Comparator.comparingInt(TaxSlab::getSlabOrder));
+
+        double annualTax = 0.0;
+
+        for (TaxSlab slab : slabs) {
+            double slabFrom = slab.getIncomeFrom();
+            double slabTo = slab.getIncomeTo() != null ? slab.getIncomeTo() : Double.MAX_VALUE;
+            double taxRate = slab.getTaxRate();
+
+            if (annualTaxableIncome > slabFrom) {
+                double taxableInSlab;
+                if (annualTaxableIncome >= slabTo) {
+                    taxableInSlab = slabTo - slabFrom;
+                } else {
+                    taxableInSlab = annualTaxableIncome - slabFrom;
+                }
+                
+                if (taxableInSlab > 0) {
+                    annualTax += taxableInSlab * taxRate;
+                }
+            }
+        }
+
+        double fortnightlyTax = annualTax / fortnightsPerYear;
+        log.info("SWT Calculation: Annual Income={}, Annual Tax={}, Fortnightly Tax={}", 
+                annualTaxableIncome, annualTax, fortnightlyTax);
+        
+        return fortnightlyTax;
+    }
+
+    /**
+     * Calculate Superannuation deduction (employee contribution).
+     * Rate comes from TaxConfiguration.
+     */
+    private double calculateSuperannuation(double fortnightlyBasicSalary, TaxConfiguration taxConfig) {
+        double superRate = (taxConfig != null && taxConfig.getSuperEmployeePercentage() != null) 
+                ? taxConfig.getSuperEmployeePercentage() 
+                : DEFAULT_SUPER_EMPLOYEE_PERCENTAGE;
+        
+        return fortnightlyBasicSalary * superRate;
+    }
+
+    /**
+     * Get active payroll configuration.
+     */
+    private PayrollConfiguration getActivePayrollConfiguration(LocalDate date) {
+        return payrollConfigurationRepository.findActiveConfigurationForDate(date)
+                .orElseGet(() -> {
+                    log.warn("No active payroll configuration found. Using default values.");
+                    return null;
+                });
+    }
+
+    /**
+     * Compute payroll for a single employee.
+     * NO HARDCODED ALLOWANCES - only Basic Salary + Overtime from approved requests.
+     */
     private PayrollDetail computeEmployeePayroll(Employee employee, PayrollRun payrollRun, 
-            int fortnight, int year, int totalWorkingDays, LocalDate startDate, LocalDate endDate) {
+            int fortnight, int year, int totalWorkingDays, LocalDate startDate, LocalDate endDate,
+            TaxConfiguration taxConfig, PayrollConfiguration payrollConfig) {
         
-        // Get monthly basic salary and convert to fortnightly
-        Double monthlyBasicSalary = employee.getBasicSalary() != null ? employee.getBasicSalary() : 0.0;
-        Double fortnightlyBasicSalary = monthlyBasicSalary / 2; // Monthly / 2 for fortnightly
+        // Get configuration values (with defaults)
+        int fortnightsPerYear = payrollConfig != null ? payrollConfig.getFortnightsPerYear() : DEFAULT_FORTNIGHTS_PER_YEAR;
+        double standardHoursPerDay = payrollConfig != null ? payrollConfig.getStandardHoursPerDay() : DEFAULT_STANDARD_HOURS_PER_DAY;
+        double overtimeMultiplier = payrollConfig != null ? payrollConfig.getOvertimeRateMultiplier() : DEFAULT_OVERTIME_MULTIPLIER;
+        double lateDeductionAmount = payrollConfig != null ? payrollConfig.getLateDeductionAmount() : DEFAULT_LATE_DEDUCTION;
+        double superEmployerRate = (taxConfig != null && taxConfig.getSuperEmployerPercentage() != null) 
+                ? taxConfig.getSuperEmployerPercentage() : 0.084;
         
-        // Calculate attendance using date range (fortnightly)
+        // Get annual basic salary and convert to fortnightly
+        Double annualBasicSalary = employee.getBasicSalary() != null ? employee.getBasicSalary() : 0.0;
+        Double fortnightlyBasicSalary = annualBasicSalary / fortnightsPerYear;
+        
+        log.info("Computing payroll for employee {}: Annual Basic={}, Fortnightly Basic={}", 
+                employee.getEmpCode(), annualBasicSalary, fortnightlyBasicSalary);
+        
+        // Calculate attendance
         Integer daysWorked = attendanceRepository.countPresentDaysInPeriod(employee.getId(), startDate, endDate);
-        daysWorked = daysWorked != null ? daysWorked : totalWorkingDays;
+        if (daysWorked == null || daysWorked == 0) {
+            daysWorked = totalWorkingDays;
+            log.info("No attendance data for employee {}, assuming {} working days", 
+                    employee.getEmpCode(), totalWorkingDays);
+        }
         
         Integer lateCount = attendanceRepository.countLateDaysInPeriod(employee.getId(), startDate, endDate);
         lateCount = lateCount != null ? lateCount : 0;
 
-        // Get approved overtime
+        // Get approved overtime requests from EmployeeRequest table
         List<EmployeeRequest> approvedOvertimes = requestRepository.findApprovedOvertimeNotInPayroll(
                 employee.getId(), startDate, endDate);
         double approvedOvertimeHours = approvedOvertimes.stream()
@@ -174,27 +306,50 @@ public class PayrollService {
                 .mapToDouble(r -> r.getTotalDays() != null ? r.getTotalDays() : 0.0)
                 .sum();
 
-        // Calculate earnings based on fortnightly rates
+        // Calculate earnings - ONLY Basic Salary + Overtime (no hardcoded allowances)
         double dailyRate = fortnightlyBasicSalary / totalWorkingDays;
+        double hourlyRate = dailyRate / standardHoursPerDay;
         double proRataBasic = dailyRate * daysWorked;
-        double hra = proRataBasic * HRA_PERCENTAGE;
-        double overtimePay = (dailyRate / 8) * approvedOvertimeHours * OVERTIME_RATE_MULTIPLIER;
+        
+        // Overtime pay from approved requests only
+        double overtimePay = hourlyRate * approvedOvertimeHours * overtimeMultiplier;
 
-        // Calculate deductions
-        double pfDeduction = proRataBasic * PF_PERCENTAGE;
-        double taxDeduction = (proRataBasic + hra) * TAX_PERCENTAGE;
-        double lateDeduction = lateCount * LATE_DEDUCTION_PER_OCCURRENCE;
+        // GROSS = Basic + Overtime (no hardcoded allowances)
+        double grossSalary = proRataBasic + overtimePay;
+        
+        // Taxable income is the gross salary
+        double taxableIncome = grossSalary;
+        double annualTaxableIncome = taxableIncome * fortnightsPerYear;
+        
+        // Calculate deductions using configurations
+        double superEmployee = calculateSuperannuation(proRataBasic, taxConfig);
+        double superEmployer = proRataBasic * superEmployerRate;
+        double salaryWagesTax = calculateSWT(taxableIncome, taxConfig, payrollConfig, true);
+        double lateDeduction = lateCount * lateDeductionAmount;
+
+        log.info("Employee {}: Basic={}, Overtime={}hrs(K{}), Gross={}, Super={}, SWT={}", 
+                employee.getEmpCode(), proRataBasic, approvedOvertimeHours, overtimePay, 
+                grossSalary, superEmployee, salaryWagesTax);
 
         PayrollDetail detail = PayrollDetail.builder()
                 .payrollRun(payrollRun)
                 .employee(employee)
                 .basicSalary(proRataBasic)
-                .hra(hra)
-                .transportAllowance(TRANSPORT_ALLOWANCE)
-                .medicalAllowance(MEDICAL_ALLOWANCE)
+                // NO housing/transport/medical allowances - removed hardcoding
+                .housingAllowance(0.0)
+                .transportAllowance(0.0)
+                .mealAllowance(0.0)
+                .medicalAllowance(0.0)
+                .hra(0.0)
                 .overtimePay(overtimePay)
-                .pfDeduction(pfDeduction)
-                .taxDeduction(taxDeduction)
+                .salaryWagesTax(salaryWagesTax)
+                .superEmployee(superEmployee)
+                .superEmployer(superEmployer)
+                .pfDeduction(0.0)  // PF deduction removed
+                .taxDeduction(salaryWagesTax)
+                .taxableIncome(taxableIncome)
+                .projectedAnnualIncome(annualTaxableIncome)
+                .isTaxResident(true)
                 .lateDeduction(lateDeduction)
                 .totalWorkingDays(totalWorkingDays)
                 .daysWorked(daysWorked)
@@ -271,8 +426,10 @@ public class PayrollService {
         PayrollRun payrollRun = payrollRunRepository.findById(action.getPayrollRunId())
                 .orElseThrow(() -> new ResourceNotFoundException("Payroll run not found"));
 
-        if (payrollRun.getStatus() != PayrollStatus.CHECKED) {
-            throw new InvalidPayrollStateException("Payroll must be in CHECKED status to authorize");
+        // Accept both COMPUTED and CHECKED status (simplified workflow)
+        if (payrollRun.getStatus() != PayrollStatus.CHECKED && 
+            payrollRun.getStatus() != PayrollStatus.COMPUTED) {
+            throw new InvalidPayrollStateException("Payroll must be in COMPUTED or CHECKED status to authorize and credit");
         }
 
         // Idempotency check

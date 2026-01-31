@@ -205,12 +205,19 @@ public abstract class BaseIntegrationTest {
                 .build());
     }
 
-    protected PayrollRun createPayrollRun(int month, int year, PayrollStatus status) {
+    protected PayrollRun createPayrollRun(int fortnight, int year, PayrollStatus status) {
         List<Employee> employees = employeeRepository.findByIsActiveTrue();
         
+        // Calculate period dates for the fortnight
+        LocalDate yearStart = LocalDate.of(year, 1, 1);
+        LocalDate periodStart = yearStart.plusDays((long) (fortnight - 1) * 14);
+        LocalDate periodEnd = periodStart.plusDays(13);
+        
         PayrollRun payrollRun = payrollRunRepository.save(PayrollRun.builder()
-                .month(month)
+                .fortnight(fortnight)
                 .year(year)
+                .periodStart(periodStart)
+                .periodEnd(periodEnd)
                 .status(status)
                 .runDate(LocalDateTime.now())
                 .totalEmployees(employees.size())

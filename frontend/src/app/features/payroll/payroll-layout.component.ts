@@ -22,16 +22,10 @@ import { AuthService } from '../../core/services/auth.service';
               <span class="material-icons">dashboard</span>
               Dashboard
             </a>
-            @if (authService.isPayrollChecker() || authService.isPayrollAdmin()) {
-              <a routerLink="/payroll/check" routerLinkActive="active">
-                <span class="material-icons">fact_check</span>
-                Check Payroll
-              </a>
-            }
             @if (authService.isPayrollAdmin()) {
               <a routerLink="/payroll/authorize" routerLinkActive="active">
                 <span class="material-icons">verified</span>
-                Approve & Process
+                Authorize & Credit
               </a>
             }
           </div>

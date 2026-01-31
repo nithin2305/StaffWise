@@ -29,10 +29,19 @@ public class DataInitializer {
             DepartmentRepository departmentRepository,
             LeaveBalanceRepository leaveBalanceRepository,
             PayrollRunRepository payrollRunRepository,
-            PayrollDetailRepository payrollDetailRepository) {
+            PayrollDetailRepository payrollDetailRepository,
+            TaxConfigurationRepository taxConfigurationRepository,
+            TaxSlabRepository taxSlabRepository,
+            PayrollConfigurationRepository payrollConfigurationRepository) {
         
         return args -> {
-            // Only initialize if no data exists
+            // Initialize tax configuration if not exists
+            initializeTaxConfiguration(taxConfigurationRepository, taxSlabRepository);
+            
+            // Initialize payroll configuration if not exists
+            initializePayrollConfiguration(payrollConfigurationRepository);
+            
+            // Only initialize employee data if no data exists
             if (employeeRepository.count() > 0) {
                 log.info("Data already exists, skipping initialization");
                 return;
@@ -197,8 +206,8 @@ public class DataInitializer {
 
         for (Employee emp : employees) {
             // Monthly salary converted to fortnightly (divide by 2)
-            double monthlyBasicSalary = emp.getBasicSalary() != null ? emp.getBasicSalary() : 2000.0; // K2000 monthly
-            double fortnightlyBasic = monthlyBasicSalary / 2;
+            double annualBasicSalary = emp.getBasicSalary() != null ? emp.getBasicSalary() : 52000.0; // K52000 annual
+            double fortnightlyBasic = annualBasicSalary / 26; // 26 fortnights per year
             double housingAllowance = fortnightlyBasic * 0.3;
             double transportAllowance = 100.0; // K100 per fortnight
             double grossSalary = fortnightlyBasic + housingAllowance + transportAllowance;
@@ -296,5 +305,149 @@ public class DataInitializer {
                 .usedLeaves(0.0)
                 .pendingLeaves(0.0)
                 .build());
+    }
+
+    /**
+     * Initialize PNG Tax Configuration with SWT slabs for 2025-2026.
+     * PNG Salary and Wages Tax (SWT) rates for residents:
+     * - K0 - K12,500: 0%
+     * - K12,501 - K20,000: 22%
+     * - K20,001 - K33,000: 30%
+     * - K33,001 - K70,000: 35%
+     * - K70,001 - K250,000: 40%
+     * - Over K250,000: 42%
+     */
+    private void initializeTaxConfiguration(TaxConfigurationRepository taxConfigRepo, 
+                                           TaxSlabRepository taxSlabRepo) {
+        // Check if tax configuration already exists
+        if (taxConfigRepo.findByFinancialYear("2025").isPresent()) {
+            log.info("Tax configuration already exists");
+            return;
+        }
+
+        log.info("Initializing PNG Tax Configuration...");
+
+        // Create tax configuration for 2025 (valid through 2026)
+        TaxConfiguration taxConfig = TaxConfiguration.builder()
+                .financialYear("2025")
+                .startDate(LocalDate.of(2025, 1, 1))
+                .endDate(LocalDate.of(2026, 12, 31))
+                .superEmployeePercentage(0.06)    // 6% employee contribution
+                .superEmployerPercentage(0.084)  // 8.4% employer contribution
+                .superMinimumSalary(0.0)
+                .taxFreeThreshold(12500.0)       // K12,500 tax-free threshold
+                .defaultResidentStatus(true)
+                .currencyCode("PGK")
+                .fortnightsPerYear(26)
+                .isActive(true)
+                .description("PNG Salary and Wages Tax (SWT) Configuration 2025-2026")
+                .build();
+
+        taxConfig = taxConfigRepo.save(taxConfig);
+
+        // Create SWT tax slabs for residents
+        // Slab 1: K0 - K12,500 @ 0%
+        taxSlabRepo.save(TaxSlab.builder()
+                .taxConfiguration(taxConfig)
+                .incomeFrom(0.0)
+                .incomeTo(12500.0)
+                .taxRate(0.0)
+                .slabOrder(1)
+                .isResident(true)
+                .description("Tax-free threshold: 0% on first K12,500")
+                .build());
+
+        // Slab 2: K12,501 - K20,000 @ 22%
+        taxSlabRepo.save(TaxSlab.builder()
+                .taxConfiguration(taxConfig)
+                .incomeFrom(12500.0)
+                .incomeTo(20000.0)
+                .taxRate(0.22)
+                .slabOrder(2)
+                .isResident(true)
+                .description("22% on income from K12,501 to K20,000")
+                .build());
+
+        // Slab 3: K20,001 - K33,000 @ 30%
+        taxSlabRepo.save(TaxSlab.builder()
+                .taxConfiguration(taxConfig)
+                .incomeFrom(20000.0)
+                .incomeTo(33000.0)
+                .taxRate(0.30)
+                .slabOrder(3)
+                .isResident(true)
+                .description("30% on income from K20,001 to K33,000")
+                .build());
+
+        // Slab 4: K33,001 - K70,000 @ 35%
+        taxSlabRepo.save(TaxSlab.builder()
+                .taxConfiguration(taxConfig)
+                .incomeFrom(33000.0)
+                .incomeTo(70000.0)
+                .taxRate(0.35)
+                .slabOrder(4)
+                .isResident(true)
+                .description("35% on income from K33,001 to K70,000")
+                .build());
+
+        // Slab 5: K70,001 - K250,000 @ 40%
+        taxSlabRepo.save(TaxSlab.builder()
+                .taxConfiguration(taxConfig)
+                .incomeFrom(70000.0)
+                .incomeTo(250000.0)
+                .taxRate(0.40)
+                .slabOrder(5)
+                .isResident(true)
+                .description("40% on income from K70,001 to K250,000")
+                .build());
+
+        // Slab 6: Over K250,000 @ 42%
+        taxSlabRepo.save(TaxSlab.builder()
+                .taxConfiguration(taxConfig)
+                .incomeFrom(250000.0)
+                .incomeTo(null)  // null means unlimited
+                .taxRate(0.42)
+                .slabOrder(6)
+                .isResident(true)
+                .description("42% on income over K250,000")
+                .build());
+
+        log.info("PNG Tax Configuration initialized successfully");
+    }
+
+    /**
+     * Initialize default payroll configuration for PNG fortnightly payroll.
+     * All rates are configurable - NO HARDCODING in PayrollService.
+     */
+    private void initializePayrollConfiguration(PayrollConfigurationRepository payrollConfigRepo) {
+        // Check if configuration already exists
+        if (payrollConfigRepo.count() > 0) {
+            log.info("Payroll configuration already exists, skipping initialization");
+            return;
+        }
+
+        log.info("Initializing default payroll configuration...");
+
+        PayrollConfiguration config = PayrollConfiguration.builder()
+                .configName("PNG Standard Payroll Configuration 2025")
+                .description("Default payroll configuration for PNG fortnightly pay cycle")
+                // Overtime rates
+                .overtimeRateMultiplier(1.5)     // 1.5x normal rate for weekday overtime
+                .weekendOvertimeMultiplier(2.0) // 2x normal rate for weekend work
+                .holidayOvertimeMultiplier(2.5) // 2.5x for public holidays
+                // Deductions
+                .lateDeductionAmount(50.0)      // K50 deduction per late occurrence
+                // Working hours/days
+                .standardHoursPerDay(8.0)       // 8 hours per day
+                .workingDaysPerFortnight(10)    // 10 working days per fortnight
+                .fortnightsPerYear(26)          // 26 fortnights per year
+                // Validity
+                .effectiveFrom(LocalDate.of(2025, 1, 1))
+                .effectiveTo(null)              // No end date - current active config
+                .isActive(true)
+                .build();
+
+        payrollConfigRepo.save(config);
+        log.info("Payroll configuration initialized: {}", config.getConfigName());
     }
 }

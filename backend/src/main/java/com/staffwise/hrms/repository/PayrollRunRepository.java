@@ -22,7 +22,8 @@ public interface PayrollRunRepository extends JpaRepository<PayrollRun, Long> {
     @Query("SELECT pr FROM PayrollRun pr WHERE pr.status IN ('COMPUTED', 'REJECTED') ORDER BY pr.year DESC, pr.fortnight DESC")
     List<PayrollRun> findPayrollsForChecking();
 
-    @Query("SELECT pr FROM PayrollRun pr WHERE pr.status = 'CHECKED' ORDER BY pr.year DESC, pr.fortnight DESC")
+    // For simplified workflow: COMPUTED and CHECKED payrolls are ready for authorization & credit
+    @Query("SELECT pr FROM PayrollRun pr WHERE pr.status IN ('COMPUTED', 'CHECKED') ORDER BY pr.year DESC, pr.fortnight DESC")
     List<PayrollRun> findPayrollsForAuthorization();
 
     @Query("SELECT pr FROM PayrollRun pr WHERE pr.status = 'AUTHORIZED' ORDER BY pr.year DESC, pr.fortnight DESC")

@@ -14,9 +14,9 @@ public interface TaxConfigurationRepository extends JpaRepository<TaxConfigurati
 
     Optional<TaxConfiguration> findByFinancialYear(String financialYear);
 
-    @Query("SELECT tc FROM TaxConfiguration tc WHERE tc.isActive = true AND :date BETWEEN tc.startDate AND tc.endDate")
+    @Query("SELECT tc FROM TaxConfiguration tc WHERE tc.isActive = true AND :date BETWEEN tc.startDate AND tc.endDate ORDER BY tc.startDate DESC LIMIT 1")
     Optional<TaxConfiguration> findActiveConfigurationForDate(@Param("date") LocalDate date);
 
-    @Query("SELECT tc FROM TaxConfiguration tc WHERE tc.isActive = true ORDER BY tc.startDate DESC")
+    @Query("SELECT tc FROM TaxConfiguration tc WHERE tc.isActive = true ORDER BY tc.startDate DESC LIMIT 1")
     Optional<TaxConfiguration> findCurrentActiveConfiguration();
 }

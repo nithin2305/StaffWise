@@ -17,17 +17,17 @@ public interface PayrollDetailRepository extends JpaRepository<PayrollDetail, Lo
     Optional<PayrollDetail> findByPayrollRunIdAndEmployeeId(Long payrollRunId, Long employeeId);
 
     @Query("SELECT pd FROM PayrollDetail pd WHERE pd.employee.id = :empId " +
-           "ORDER BY pd.payrollRun.year DESC, pd.payrollRun.month DESC")
+           "ORDER BY pd.payrollRun.year DESC, pd.payrollRun.fortnight DESC")
     List<PayrollDetail> findByEmployeeIdOrderByPeriodDesc(@Param("empId") Long employeeId);
 
     @Query("SELECT pd FROM PayrollDetail pd WHERE pd.employee.id = :empId " +
-           "AND pd.payrollRun.month = :month AND pd.payrollRun.year = :year")
+           "AND pd.payrollRun.fortnight = :fortnight AND pd.payrollRun.year = :year")
     Optional<PayrollDetail> findByEmployeeAndPeriod(@Param("empId") Long employeeId,
-                                                     @Param("month") Integer month,
+                                                     @Param("fortnight") Integer fortnight,
                                                      @Param("year") Integer year);
 
     @Query("SELECT pd FROM PayrollDetail pd WHERE pd.employee.id = :empId " +
-           "AND pd.payrollRun.status = 'PROCESSED' ORDER BY pd.payrollRun.year DESC, pd.payrollRun.month DESC")
+           "AND pd.payrollRun.status = 'PROCESSED' ORDER BY pd.payrollRun.year DESC, pd.payrollRun.fortnight DESC")
     List<PayrollDetail> findProcessedPayslips(@Param("empId") Long employeeId);
 
     @Query("SELECT SUM(pd.netPay) FROM PayrollDetail pd WHERE pd.payrollRun.id = :runId")

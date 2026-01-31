@@ -68,13 +68,14 @@ public class PayslipPdfService {
             Table earningsTable = new Table(UnitValue.createPercentArray(new float[]{3, 1}));
             earningsTable.setWidth(UnitValue.createPercentValue(100));
             
-            addAmountRow(earningsTable, "Basic Salary", payroll.getBasicSalary());
-            addAmountRow(earningsTable, "HRA", payroll.getHra());
-            addAmountRow(earningsTable, "Transport Allowance", payroll.getTransportAllowance());
-            addAmountRow(earningsTable, "Medical Allowance", payroll.getMedicalAllowance());
-            addAmountRow(earningsTable, "Special Allowance", payroll.getSpecialAllowance());
-            addAmountRow(earningsTable, "Overtime Pay", payroll.getOvertimePay());
-            addAmountRow(earningsTable, "Bonus", payroll.getBonus());
+            // Only add rows with non-zero values
+            addAmountRowIfNonZero(earningsTable, "Basic Salary", payroll.getBasicSalary());
+            addAmountRowIfNonZero(earningsTable, "HRA", payroll.getHra());
+            addAmountRowIfNonZero(earningsTable, "Transport Allowance", payroll.getTransportAllowance());
+            addAmountRowIfNonZero(earningsTable, "Medical Allowance", payroll.getMedicalAllowance());
+            addAmountRowIfNonZero(earningsTable, "Special Allowance", payroll.getSpecialAllowance());
+            addAmountRowIfNonZero(earningsTable, "Overtime Pay", payroll.getOvertimePay());
+            addAmountRowIfNonZero(earningsTable, "Bonus", payroll.getBonus());
             
             Cell grossCell = new Cell().add(new Paragraph("Gross Salary").setBold());
             Cell grossAmtCell = new Cell().add(new Paragraph(formatAmount(payroll.getGrossSalary())).setBold())
@@ -90,13 +91,14 @@ public class PayslipPdfService {
             Table deductionsTable = new Table(UnitValue.createPercentArray(new float[]{3, 1}));
             deductionsTable.setWidth(UnitValue.createPercentValue(100));
             
-            addAmountRow(deductionsTable, "PF Deduction", payroll.getPfDeduction());
-            addAmountRow(deductionsTable, "Tax Deduction", payroll.getTaxDeduction());
-            addAmountRow(deductionsTable, "Insurance Deduction", payroll.getInsuranceDeduction());
-            addAmountRow(deductionsTable, "Loan Deduction", payroll.getLoanDeduction());
-            addAmountRow(deductionsTable, "Leave Deduction", payroll.getLeaveDeduction());
-            addAmountRow(deductionsTable, "Late Deduction", payroll.getLateDeduction());
-            addAmountRow(deductionsTable, "Other Deductions", payroll.getOtherDeductions());
+            // Only add rows with non-zero values
+            addAmountRowIfNonZero(deductionsTable, "PF Deduction", payroll.getPfDeduction());
+            addAmountRowIfNonZero(deductionsTable, "Tax Deduction", payroll.getTaxDeduction());
+            addAmountRowIfNonZero(deductionsTable, "Insurance Deduction", payroll.getInsuranceDeduction());
+            addAmountRowIfNonZero(deductionsTable, "Loan Deduction", payroll.getLoanDeduction());
+            addAmountRowIfNonZero(deductionsTable, "Leave Deduction", payroll.getLeaveDeduction());
+            addAmountRowIfNonZero(deductionsTable, "Late Deduction", payroll.getLateDeduction());
+            addAmountRowIfNonZero(deductionsTable, "Other Deductions", payroll.getOtherDeductions());
             
             Cell totalDedCell = new Cell().add(new Paragraph("Total Deductions").setBold());
             Cell totalDedAmtCell = new Cell().add(new Paragraph(formatAmount(payroll.getTotalDeductions())).setBold())
@@ -148,9 +150,12 @@ public class PayslipPdfService {
         table.addCell(new Cell().add(new Paragraph(value != null ? value : "")));
     }
 
-    private void addAmountRow(Table table, String label, Double amount) {
-        table.addCell(new Cell().add(new Paragraph(label)));
-        table.addCell(new Cell().add(new Paragraph(formatAmount(amount))).setTextAlignment(TextAlignment.RIGHT));
+    private void addAmountRowIfNonZero(Table table, String label, Double amount) {
+        // Only add the row if amount is not null and greater than zero
+        if (amount != null && amount > 0) {
+            table.addCell(new Cell().add(new Paragraph(label)));
+            table.addCell(new Cell().add(new Paragraph(formatAmount(amount))).setTextAlignment(TextAlignment.RIGHT));
+        }
     }
 
     private String formatAmount(Double amount) {

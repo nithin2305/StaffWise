@@ -19,12 +19,17 @@ export const PAYROLL_ROUTES: Routes = [
       {
         path: 'check',
         loadComponent: () => import('./pages/check.component').then(m => m.CheckPayrollComponent),
-        canActivate: [payrollCheckerGuard]
+        canActivate: [payrollCheckerGuard]  // HR can now check payroll
       },
       {
         path: 'authorize',
         loadComponent: () => import('./pages/authorize.component').then(m => m.AuthorizePayrollComponent),
-        canActivate: [payrollAdminGuard]
+        canActivate: [payrollAdminGuard]  // Payroll Admin authorizes
+      },
+      {
+        path: 'process',
+        loadComponent: () => import('./pages/process.component').then(m => m.ProcessPayrollComponent),
+        canActivate: [payrollAdminGuard]  // Payroll Admin processes (same as authorize)
       },
       {
         path: 'runs',

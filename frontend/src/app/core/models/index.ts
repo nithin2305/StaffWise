@@ -124,9 +124,12 @@ export interface EmployeeRequest {
 
 export interface PayrollRun {
   id?: number;
-  month: number;
+  fortnight?: number;
+  month?: number;
   year: number;
   period?: string;
+  periodStart?: string;
+  periodEnd?: string;
   status: PayrollStatus;
   runDate?: string;
   totalEmployees: number;

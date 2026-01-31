@@ -19,16 +19,16 @@ import { PayrollRun } from '../../../core/models';
           <div class="compute-form">
             <div class="form-row">
               <div class="form-group">
-                <label>Month</label>
-                <select [(ngModel)]="selectedMonth">
-                  @for (month of months; track month.value) {
-                    <option [value]="month.value">{{ month.label }}</option>
+                <label>Fortnight</label>
+                <select [(ngModel)]="selectedFortnight">
+                  @for (fn of fortnights; track fn.value) {
+                    <option [value]="fn.value">{{ fn.label }}</option>
                   }
                 </select>
               </div>
               <div class="form-group">
                 <label>Year</label>
-                <select [(ngModel)]="selectedYear">
+                <select [(ngModel)]="selectedYear" (ngModelChange)="onYearChange()">
                   @for (year of years; track year) {
                     <option [value]="year">{{ year }}</option>
                   }
@@ -43,6 +43,11 @@ import { PayrollRun } from '../../../core/models';
                   Compute Payroll
                 }
               </button>
+            </div>
+
+            <div class="period-info">
+              <span class="material-icons">info</span>
+              <span>Period: {{ getFortnightDateRange() }}</span>
             </div>
 
             @if (successMessage()) {
@@ -85,11 +90,13 @@ import { PayrollRun } from '../../../core/models';
                 @for (run of payrollRuns(); track run.id) {
                   <tr>
                     <td>
-                      <span class="period">{{ getMonthName(run.month) }} {{ run.year }}</span>
+                      <span class="period">Fortnight {{ run.fortnight || run.month }}, {{ run.year }}</span>
+                      <br>
+                      <small class="period-dates">{{ run.periodStart | date:'d MMM' }} - {{ run.periodEnd | date:'d MMM yyyy' }}</small>
                     </td>
                     <td>{{ run.totalEmployees }}</td>
-                    <td>{{ run.totalGross | currency:'INR':'symbol':'1.0-0' }}</td>
-                    <td>{{ run.totalNet | currency:'INR':'symbol':'1.0-0' }}</td>
+                    <td>K{{ run.totalGross | number:'1.2-2' }}</td>
+                    <td>K{{ run.totalNet | number:'1.2-2' }}</td>
                     <td>
                       <span class="status-badge" [class]="run.status.toLowerCase()">
                         {{ run.status | titlecase }}
@@ -112,38 +119,24 @@ import { PayrollRun } from '../../../core/models';
 
       <!-- Workflow Info -->
       <div class="workflow-info">
-        <h4>Payroll Workflow</h4>
+        <h4>Simplified Payroll Workflow</h4>
         <div class="workflow-steps">
           <div class="step active">
             <div class="step-icon">
               <span class="material-icons">calculate</span>
             </div>
-            <span class="step-label">Compute</span>
+            <span class="step-label">Step 1: Compute</span>
             <span class="step-role">HR</span>
-          </div>
-          <div class="step-connector"></div>
-          <div class="step">
-            <div class="step-icon">
-              <span class="material-icons">fact_check</span>
-            </div>
-            <span class="step-label">Check</span>
-            <span class="step-role">Checker</span>
+            <span class="step-desc">Calculate salaries (auto-verified)</span>
           </div>
           <div class="step-connector"></div>
           <div class="step">
             <div class="step-icon">
               <span class="material-icons">verified</span>
             </div>
-            <span class="step-label">Authorize</span>
+            <span class="step-label">Step 2: Authorize & Credit</span>
             <span class="step-role">Payroll Admin</span>
-          </div>
-          <div class="step-connector"></div>
-          <div class="step">
-            <div class="step-icon">
-              <span class="material-icons">payments</span>
-            </div>
-            <span class="step-label">Process</span>
-            <span class="step-role">Payroll Admin</span>
+            <span class="step-desc">Final approval & payment</span>
           </div>
         </div>
       </div>
@@ -201,6 +194,25 @@ import { PayrollRun } from '../../../core/models';
     .btn-lg {
       padding: 0.75rem 1.5rem;
       font-size: 1rem;
+    }
+
+    .period-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: #f0f9ff;
+      border-radius: 8px;
+      color: #0369a1;
+      font-size: 0.875rem;
+
+      .material-icons { font-size: 1.125rem; }
+    }
+
+    .period-dates {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
     }
 
     .spinner {
@@ -314,6 +326,12 @@ import { PayrollRun } from '../../../core/models';
       color: var(--text-secondary);
     }
 
+    .step-desc {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      font-style: italic;
+    }
+
     .step-connector {
       width: 60px;
       height: 2px;
@@ -341,28 +359,52 @@ export class PayrollComputeComponent implements OnInit {
   successMessage = signal('');
   errorMessage = signal('');
 
-  selectedMonth = new Date().getMonth() + 1;
+  selectedFortnight = this.getCurrentFortnight();
   selectedYear = new Date().getFullYear();
 
-  months = [
-    { value: 1, label: 'January' },
-    { value: 2, label: 'February' },
-    { value: 3, label: 'March' },
-    { value: 4, label: 'April' },
-    { value: 5, label: 'May' },
-    { value: 6, label: 'June' },
-    { value: 7, label: 'July' },
-    { value: 8, label: 'August' },
-    { value: 9, label: 'September' },
-    { value: 10, label: 'October' },
-    { value: 11, label: 'November' },
-    { value: 12, label: 'December' }
-  ];
+  // Generate fortnights 1-26
+  fortnights = Array.from({ length: 26 }, (_, i) => ({
+    value: i + 1,
+    label: `Fortnight ${i + 1} (${this.getFortnightDateLabel(i + 1, new Date().getFullYear())})`
+  }));
 
-  years = [2024, 2023, 2022];
+  years = [2026, 2025, 2024, 2023];
 
   ngOnInit(): void {
     this.loadPayrollRuns();
+    this.updateFortnightLabels();
+  }
+
+  // Calculate current fortnight based on today's date
+  getCurrentFortnight(): number {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.min(Math.floor(dayOfYear / 14) + 1, 26);
+  }
+
+  // Get date label for a fortnight
+  getFortnightDateLabel(fortnight: number, year: number): string {
+    const startOfYear = new Date(year, 0, 1);
+    const startDate = new Date(startOfYear.getTime() + (fortnight - 1) * 14 * 24 * 60 * 60 * 1000);
+    const endDate = new Date(startDate.getTime() + 13 * 24 * 60 * 60 * 1000);
+    
+    const startStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const endStr = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${startStr} - ${endStr}`;
+  }
+
+  // Update fortnight labels when year changes
+  updateFortnightLabels(): void {
+    this.fortnights = Array.from({ length: 26 }, (_, i) => ({
+      value: i + 1,
+      label: `Fortnight ${i + 1} (${this.getFortnightDateLabel(i + 1, this.selectedYear)})`
+    }));
+  }
+
+  // Get date range display for selected fortnight
+  getFortnightDateRange(): string {
+    return this.getFortnightDateLabel(this.selectedFortnight, this.selectedYear) + ', ' + this.selectedYear;
   }
 
   loadPayrollRuns(): void {
@@ -380,11 +422,11 @@ export class PayrollComputeComponent implements OnInit {
     this.successMessage.set('');
     this.errorMessage.set('');
 
-    this.hrService.computePayroll(this.selectedMonth, this.selectedYear).subscribe({
+    this.hrService.computePayroll(this.selectedFortnight, this.selectedYear).subscribe({
       next: (res) => {
         this.isComputing.set(false);
         if (res.success) {
-          this.successMessage.set(`Payroll for ${this.getMonthName(this.selectedMonth)} ${this.selectedYear} computed successfully!`);
+          this.successMessage.set(`Payroll for Fortnight ${this.selectedFortnight}, ${this.selectedYear} computed successfully!`);
           this.loadPayrollRuns();
         } else {
           this.errorMessage.set(res.message || 'Failed to compute payroll');
@@ -397,7 +439,7 @@ export class PayrollComputeComponent implements OnInit {
     });
   }
 
-  getMonthName(month: number): string {
-    return this.months.find(m => m.value === month)?.label || '';
+  onYearChange(): void {
+    this.updateFortnightLabels();
   }
 }
