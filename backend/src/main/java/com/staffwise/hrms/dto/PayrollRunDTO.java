@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,8 +16,10 @@ import java.util.List;
 @Builder
 public class PayrollRunDTO {
     private Long id;
-    private Integer month;
+    private Integer fortnight;
     private Integer year;
+    private LocalDate periodStart;
+    private LocalDate periodEnd;
     private String period;
     private PayrollStatus status;
     private LocalDateTime runDate;
@@ -38,4 +41,9 @@ public class PayrollRunDTO {
     private Boolean isLocked;
     
     private List<PayrollDetailDTO> payrollDetails;
+
+    // For backwards compatibility with frontend expecting 'month'
+    public Integer getMonth() {
+        return fortnight != null ? (fortnight + 1) / 2 : null;
+    }
 }

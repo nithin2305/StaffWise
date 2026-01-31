@@ -12,9 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,28 +32,48 @@ public class PayrollService {
     private final EmployeeRequestRepository requestRepository;
     private final AuditService auditService;
 
-    // Payroll computation constants
+    // Payroll computation constants - adjusted for fortnightly pay
     private static final double HRA_PERCENTAGE = 0.40;
-    private static final double TRANSPORT_ALLOWANCE = 1600.0;
-    private static final double MEDICAL_ALLOWANCE = 1250.0;
+    private static final double TRANSPORT_ALLOWANCE = 800.0;  // Fortnightly (half of monthly)
+    private static final double MEDICAL_ALLOWANCE = 625.0;    // Fortnightly (half of monthly)
     private static final double PF_PERCENTAGE = 0.12;
     private static final double TAX_PERCENTAGE = 0.10;
     private static final double OVERTIME_RATE_MULTIPLIER = 1.5;
-    private static final double LATE_DEDUCTION_PER_OCCURRENCE = 200.0;
+    private static final double LATE_DEDUCTION_PER_OCCURRENCE = 100.0;  // Fortnightly rate
+    private static final int DAYS_IN_FORTNIGHT = 14;
+    private static final int FORTNIGHTS_PER_YEAR = 26;
 
-    // ============ PAYROLL COMPUTATION (HR) ============
+    // ============ PAYROLL COMPUTATION (HR) - FORTNIGHTLY ============
 
-    public PayrollRunDTO computePayroll(int month, int year, String computedBy) {
-        // Check if payroll already exists
-        if (payrollRunRepository.findByMonthAndYear(month, year).isPresent()) {
-            throw new IllegalStateException("Payroll already exists for " + month + "/" + year);
+    /**
+     * Compute fortnightly payroll.
+     * @param fortnight The fortnight number (1-26)
+     * @param year The year
+     * @param computedBy The user who computed the payroll
+     */
+    public PayrollRunDTO computePayroll(int fortnight, int year, String computedBy) {
+        // Validate fortnight
+        if (fortnight < 1 || fortnight > FORTNIGHTS_PER_YEAR) {
+            throw new IllegalArgumentException("Fortnight must be between 1 and " + FORTNIGHTS_PER_YEAR);
         }
+
+        // Check if payroll already exists for this fortnight
+        if (payrollRunRepository.findByFortnightAndYear(fortnight, year).isPresent()) {
+            throw new IllegalStateException("Payroll already exists for Fortnight " + fortnight + ", " + year);
+        }
+
+        // Calculate period dates
+        LocalDate[] periodDates = calculateFortnightDates(fortnight, year);
+        LocalDate periodStart = periodDates[0];
+        LocalDate periodEnd = periodDates[1];
 
         List<Employee> activeEmployees = employeeRepository.findByIsActiveTrue();
         
         PayrollRun payrollRun = PayrollRun.builder()
-                .month(month)
+                .fortnight(fortnight)
                 .year(year)
+                .periodStart(periodStart)
+                .periodEnd(periodEnd)
                 .status(PayrollStatus.COMPUTED)
                 .runDate(LocalDateTime.now())
                 .totalEmployees(activeEmployees.size())
@@ -66,14 +87,11 @@ public class PayrollService {
         double totalDeductions = 0;
         double totalNetPay = 0;
 
-        YearMonth yearMonth = YearMonth.of(year, month);
-        int totalWorkingDays = calculateWorkingDays(yearMonth);
-        LocalDate startDate = yearMonth.atDay(1);
-        LocalDate endDate = yearMonth.atEndOfMonth();
+        int totalWorkingDays = calculateWorkingDaysInPeriod(periodStart, periodEnd);
 
         for (Employee employee : activeEmployees) {
-            PayrollDetail detail = computeEmployeePayroll(employee, payrollRun, month, year, 
-                    totalWorkingDays, startDate, endDate);
+            PayrollDetail detail = computeEmployeePayroll(employee, payrollRun, fortnight, year, 
+                    totalWorkingDays, periodStart, periodEnd);
             
             totalGross += detail.getGrossSalary();
             totalDeductions += detail.getTotalDeductions();
@@ -87,22 +105,59 @@ public class PayrollService {
         PayrollRun saved = payrollRunRepository.save(payrollRun);
         
         auditService.logAction("PayrollRun", saved.getId(), "COMPUTE", computedBy, 
-                null, "Computed payroll for " + month + "/" + year);
+                null, "Computed fortnightly payroll for Fortnight " + fortnight + ", " + year);
         
-        log.info("Payroll computed for {}/{} by {} - Total Net Pay: {}", month, year, computedBy, totalNetPay);
+        log.info("Fortnightly payroll computed for Fortnight {}/{} by {} - Total Net Pay: {}", 
+                fortnight, year, computedBy, totalNetPay);
         return mapToDTO(saved);
     }
 
+    /**
+     * Calculate the start and end dates for a given fortnight.
+     * Fortnight 1 starts on Jan 1 of the year.
+     */
+    private LocalDate[] calculateFortnightDates(int fortnight, int year) {
+        LocalDate yearStart = LocalDate.of(year, 1, 1);
+        LocalDate periodStart = yearStart.plusDays((long) (fortnight - 1) * DAYS_IN_FORTNIGHT);
+        LocalDate periodEnd = periodStart.plusDays(DAYS_IN_FORTNIGHT - 1);
+        
+        // Ensure period end doesn't exceed year boundary
+        LocalDate yearEnd = LocalDate.of(year, 12, 31);
+        if (periodEnd.isAfter(yearEnd)) {
+            periodEnd = yearEnd;
+        }
+        
+        return new LocalDate[] { periodStart, periodEnd };
+    }
+
+    /**
+     * Calculate working days (Mon-Fri) in a date range.
+     */
+    private int calculateWorkingDaysInPeriod(LocalDate start, LocalDate end) {
+        int workingDays = 0;
+        LocalDate current = start;
+        while (!current.isAfter(end)) {
+            DayOfWeek day = current.getDayOfWeek();
+            if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
+                workingDays++;
+            }
+            current = current.plusDays(1);
+        }
+        return workingDays;
+    }
+
     private PayrollDetail computeEmployeePayroll(Employee employee, PayrollRun payrollRun, 
-            int month, int year, int totalWorkingDays, LocalDate startDate, LocalDate endDate) {
+            int fortnight, int year, int totalWorkingDays, LocalDate startDate, LocalDate endDate) {
         
-        Double basicSalary = employee.getBasicSalary() != null ? employee.getBasicSalary() : 0.0;
+        // Get monthly basic salary and convert to fortnightly
+        Double monthlyBasicSalary = employee.getBasicSalary() != null ? employee.getBasicSalary() : 0.0;
+        Double fortnightlyBasicSalary = monthlyBasicSalary / 2; // Monthly / 2 for fortnightly
         
-        // Calculate attendance
-        Integer daysWorked = attendanceRepository.countPresentDays(employee.getId(), month, year);
+        // Calculate attendance using date range (fortnightly)
+        Integer daysWorked = attendanceRepository.countPresentDaysInPeriod(employee.getId(), startDate, endDate);
         daysWorked = daysWorked != null ? daysWorked : totalWorkingDays;
         
-        Integer lateCount = attendanceRepository.countLateDays(employee.getId(), month, year);
+        Integer lateCount = attendanceRepository.countLateDaysInPeriod(employee.getId(), startDate, endDate);
         lateCount = lateCount != null ? lateCount : 0;
 
         // Get approved overtime
@@ -119,8 +174,8 @@ public class PayrollService {
                 .mapToDouble(r -> r.getTotalDays() != null ? r.getTotalDays() : 0.0)
                 .sum();
 
-        // Calculate earnings
-        double dailyRate = basicSalary / totalWorkingDays;
+        // Calculate earnings based on fortnightly rates
+        double dailyRate = fortnightlyBasicSalary / totalWorkingDays;
         double proRataBasic = dailyRate * daysWorked;
         double hra = proRataBasic * HRA_PERCENTAGE;
         double overtimePay = (dailyRate / 8) * approvedOvertimeHours * OVERTIME_RATE_MULTIPLIER;
@@ -221,7 +276,7 @@ public class PayrollService {
         }
 
         // Idempotency check
-        if (payrollRunRepository.isPayrollProcessed(payrollRun.getMonth(), payrollRun.getYear())) {
+        if (payrollRunRepository.isPayrollProcessed(payrollRun.getFortnight(), payrollRun.getYear())) {
             throw new InvalidPayrollStateException("Payroll for this period is already processed");
         }
 
@@ -258,7 +313,7 @@ public class PayrollService {
         }
 
         // Idempotency check
-        if (payrollRunRepository.isPayrollProcessed(payrollRun.getMonth(), payrollRun.getYear())) {
+        if (payrollRunRepository.isPayrollProcessed(payrollRun.getFortnight(), payrollRun.getYear())) {
             throw new InvalidPayrollStateException("Payroll for this period is already processed");
         }
 
@@ -320,16 +375,16 @@ public class PayrollService {
                 .collect(Collectors.toList());
     }
 
-    public PayrollDetailDTO getPayslip(Long employeeId, int month, int year) {
+    public PayrollDetailDTO getPayslip(Long employeeId, int fortnight, int year) {
         // Check if payroll is processed
-        PayrollRun payrollRun = payrollRunRepository.findByMonthAndYear(month, year)
+        PayrollRun payrollRun = payrollRunRepository.findByFortnightAndYear(fortnight, year)
                 .orElseThrow(() -> new ResourceNotFoundException("Payroll not found for this period"));
         
         if (payrollRun.getStatus() != PayrollStatus.PROCESSED) {
             throw new InvalidPayrollStateException("Payslip is only available after payroll is processed");
         }
 
-        PayrollDetail detail = payrollDetailRepository.findByEmployeeAndPeriod(employeeId, month, year)
+        PayrollDetail detail = payrollDetailRepository.findByEmployeeAndPeriod(employeeId, fortnight, year)
                 .orElseThrow(() -> new ResourceNotFoundException("Payslip not found"));
         
         return mapDetailToDTO(detail);
@@ -337,24 +392,13 @@ public class PayrollService {
 
     // ============ HELPER METHODS ============
 
-    private int calculateWorkingDays(YearMonth yearMonth) {
-        int totalDays = yearMonth.lengthOfMonth();
-        int workingDays = 0;
-        
-        for (int day = 1; day <= totalDays; day++) {
-            LocalDate date = yearMonth.atDay(day);
-            if (date.getDayOfWeek().getValue() < 6) { // Monday to Friday
-                workingDays++;
-            }
-        }
-        return workingDays;
-    }
-
     private PayrollRunDTO mapToDTO(PayrollRun payrollRun) {
         return PayrollRunDTO.builder()
                 .id(payrollRun.getId())
-                .month(payrollRun.getMonth())
+                .fortnight(payrollRun.getFortnight())
                 .year(payrollRun.getYear())
+                .periodStart(payrollRun.getPeriodStart())
+                .periodEnd(payrollRun.getPeriodEnd())
                 .period(payrollRun.getPeriod())
                 .status(payrollRun.getStatus())
                 .runDate(payrollRun.getRunDate())

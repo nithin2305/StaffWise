@@ -137,10 +137,11 @@ public class DataInitializer {
                     .isActive(true)
                     .build());
 
-            // Create sample processed payroll data for demonstration
+            // Create sample processed payroll data for demonstration (fortnightly)
             List<Employee> allEmployees = Arrays.asList(admin, hrUser, payrollChecker, payrollAdmin, employee);
-            createSamplePayroll(payrollRunRepository, payrollDetailRepository, allEmployees, 12, 2025);
-            createSamplePayroll(payrollRunRepository, payrollDetailRepository, allEmployees, 1, 2026);
+            createSamplePayroll(payrollRunRepository, payrollDetailRepository, allEmployees, 25, 2025); // Fortnight 25 of 2025
+            createSamplePayroll(payrollRunRepository, payrollDetailRepository, allEmployees, 26, 2025); // Fortnight 26 of 2025
+            createSamplePayroll(payrollRunRepository, payrollDetailRepository, allEmployees, 1, 2026);  // Fortnight 1 of 2026
 
             // Create leave balances for all employees
             for (Employee emp : allEmployees) {
@@ -161,11 +162,18 @@ public class DataInitializer {
 
     private void createSamplePayroll(PayrollRunRepository payrollRunRepository, 
                                      PayrollDetailRepository payrollDetailRepository,
-                                     List<Employee> employees, int month, int year) {
+                                     List<Employee> employees, int fortnight, int year) {
+        // Calculate period dates for the fortnight
+        LocalDate yearStart = LocalDate.of(year, 1, 1);
+        LocalDate periodStart = yearStart.plusDays((long) (fortnight - 1) * 14);
+        LocalDate periodEnd = periodStart.plusDays(13);
+
         // Create a processed payroll run
         PayrollRun payrollRun = payrollRunRepository.save(PayrollRun.builder()
-                .month(month)
+                .fortnight(fortnight)
                 .year(year)
+                .periodStart(periodStart)
+                .periodEnd(periodEnd)
                 .status(PayrollStatus.PROCESSED)
                 .runDate(LocalDateTime.now())
                 .totalEmployees(employees.size())
@@ -183,57 +191,81 @@ public class DataInitializer {
         double totalGross = 0;
         double totalDeductions = 0;
         double totalNetPay = 0;
+        double totalSwt = 0;
+        double totalSuperEmployee = 0;
+        double totalSuperEmployer = 0;
 
         for (Employee emp : employees) {
-            double basicSalary = emp.getBasicSalary() != null ? emp.getBasicSalary() : 50000.0;
-            double hra = basicSalary * 0.4;
-            double transportAllowance = 1600.0;
-            double medicalAllowance = 1250.0;
-            double specialAllowance = basicSalary * 0.1;
-            double grossSalary = basicSalary + hra + transportAllowance + medicalAllowance + specialAllowance;
+            // Monthly salary converted to fortnightly (divide by 2)
+            double monthlyBasicSalary = emp.getBasicSalary() != null ? emp.getBasicSalary() : 2000.0; // K2000 monthly
+            double fortnightlyBasic = monthlyBasicSalary / 2;
+            double housingAllowance = fortnightlyBasic * 0.3;
+            double transportAllowance = 100.0; // K100 per fortnight
+            double grossSalary = fortnightlyBasic + housingAllowance + transportAllowance;
             
-            double pfDeduction = basicSalary * 0.12;
-            double taxDeduction = grossSalary > 50000 ? grossSalary * 0.1 : grossSalary * 0.05;
-            double totalDeductionsForEmp = pfDeduction + taxDeduction;
+            // PNG SWT calculation (simplified - 22% above tax-free threshold)
+            double annualGross = grossSalary * 26;
+            double swt = 0;
+            if (annualGross > 12500) {
+                swt = (annualGross - 12500) * 0.22 / 26; // Simplified calculation
+            }
+            
+            // Superannuation (6% employee, 8.4% employer)
+            double superEmployee = grossSalary * 0.06;
+            double superEmployer = grossSalary * 0.084;
+            
+            double totalDeductionsForEmp = swt + superEmployee;
             double netPay = grossSalary - totalDeductionsForEmp;
 
             payrollDetailRepository.save(PayrollDetail.builder()
                     .payrollRun(payrollRun)
                     .employee(emp)
-                    .basicSalary(basicSalary)
-                    .hra(hra)
+                    .basicSalary(fortnightlyBasic)
+                    .housingAllowance(housingAllowance)
                     .transportAllowance(transportAllowance)
-                    .medicalAllowance(medicalAllowance)
-                    .specialAllowance(specialAllowance)
+                    .mealAllowance(0.0)
+                    .specialAllowance(0.0)
                     .overtimePay(0.0)
                     .bonus(0.0)
-                    .pfDeduction(pfDeduction)
-                    .taxDeduction(taxDeduction)
-                    .insuranceDeduction(0.0)
+                    .salaryWagesTax(swt)
+                    .superEmployee(superEmployee)
+                    .superEmployer(superEmployer)
                     .loanDeduction(0.0)
+                    .advanceDeduction(0.0)
                     .otherDeductions(0.0)
                     .leaveDeduction(0.0)
                     .lateDeduction(0.0)
-                    .totalWorkingDays(22)
-                    .daysWorked(22)
+                    .totalWorkingDays(10) // 10 working days in a fortnight
+                    .daysWorked(10)
                     .leavesTaken(0.0)
                     .approvedOvertimeHours(0.0)
                     .lateCount(0)
+                    .taxableIncome(grossSalary)
+                    .projectedAnnualIncome(annualGross)
+                    .isTaxResident(true)
                     .grossSalary(grossSalary)
                     .totalDeductions(totalDeductionsForEmp)
                     .netPay(netPay)
-                    .remarks("Payroll processed")
+                    .ctc(grossSalary + superEmployer)
+                    .remarks("Fortnightly payroll processed")
                     .build());
 
             totalGross += grossSalary;
             totalDeductions += totalDeductionsForEmp;
             totalNetPay += netPay;
+            totalSwt += swt;
+            totalSuperEmployee += superEmployee;
+            totalSuperEmployer += superEmployer;
         }
 
         // Update payroll run totals
         payrollRun.setTotalGross(totalGross);
         payrollRun.setTotalDeductions(totalDeductions);
         payrollRun.setTotalNetPay(totalNetPay);
+        payrollRun.setTotalSwt(totalSwt);
+        payrollRun.setTotalSuperEmployee(totalSuperEmployee);
+        payrollRun.setTotalSuperEmployer(totalSuperEmployer);
+        payrollRun.setTotalSuper(totalSuperEmployee + totalSuperEmployer);
         payrollRunRepository.save(payrollRun);
     }
 

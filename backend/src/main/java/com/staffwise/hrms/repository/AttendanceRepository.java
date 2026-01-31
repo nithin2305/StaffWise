@@ -34,6 +34,13 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
            "AND EXTRACT(YEAR FROM a.attendanceDate) = :year")
     Integer countPresentDays(@Param("empId") Long employeeId, @Param("month") int month, @Param("year") int year);
 
+    // Fortnightly version - count present days in date range
+    @Query("SELECT COUNT(a) FROM Attendance a WHERE a.employee.id = :empId " +
+           "AND a.status = 'PRESENT' AND a.attendanceDate BETWEEN :startDate AND :endDate")
+    Integer countPresentDaysInPeriod(@Param("empId") Long employeeId, 
+                                      @Param("startDate") LocalDate startDate, 
+                                      @Param("endDate") LocalDate endDate);
+
     @Query("SELECT SUM(a.overtimeHours) FROM Attendance a WHERE a.employee.id = :empId " +
            "AND EXTRACT(MONTH FROM a.attendanceDate) = :month " +
            "AND EXTRACT(YEAR FROM a.attendanceDate) = :year")
@@ -43,6 +50,13 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
            "AND a.isLate = true AND EXTRACT(MONTH FROM a.attendanceDate) = :month " +
            "AND EXTRACT(YEAR FROM a.attendanceDate) = :year")
     Integer countLateDays(@Param("empId") Long employeeId, @Param("month") int month, @Param("year") int year);
+
+    // Fortnightly version - count late days in date range
+    @Query("SELECT COUNT(a) FROM Attendance a WHERE a.employee.id = :empId " +
+           "AND a.isLate = true AND a.attendanceDate BETWEEN :startDate AND :endDate")
+    Integer countLateDaysInPeriod(@Param("empId") Long employeeId, 
+                                   @Param("startDate") LocalDate startDate, 
+                                   @Param("endDate") LocalDate endDate);
 
     @Query("SELECT a FROM Attendance a WHERE a.employee.department.id = :deptId " +
            "AND a.attendanceDate = :date")
