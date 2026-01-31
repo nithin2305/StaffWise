@@ -210,6 +210,7 @@ public class PayrollService {
     }
 
     // ============ PAYROLL AUTHORIZATION (PAYROLL ADMIN) ============
+    // Authorization now directly processes the payroll (combined authorize + process)
 
     public PayrollRunDTO authorizePayroll(PayrollActionDTO action, String authorizedBy) {
         PayrollRun payrollRun = payrollRunRepository.findById(action.getPayrollRunId())
@@ -219,17 +220,30 @@ public class PayrollService {
             throw new InvalidPayrollStateException("Payroll must be in CHECKED status to authorize");
         }
 
-        payrollRun.setStatus(PayrollStatus.AUTHORIZED);
+        // Idempotency check
+        if (payrollRunRepository.isPayrollProcessed(payrollRun.getMonth(), payrollRun.getYear())) {
+            throw new InvalidPayrollStateException("Payroll for this period is already processed");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        
+        // Set authorization details
         payrollRun.setAuthorizedBy(authorizedBy);
-        payrollRun.setAuthorizedAt(LocalDateTime.now());
+        payrollRun.setAuthorizedAt(now);
         payrollRun.setAuthorizationRemarks(action.getRemarks());
+        
+        // Directly process the payroll (combined step)
+        payrollRun.setStatus(PayrollStatus.PROCESSED);
+        payrollRun.setProcessedBy(authorizedBy);
+        payrollRun.setProcessedAt(now);
+        payrollRun.setIsLocked(true);
 
         PayrollRun saved = payrollRunRepository.save(payrollRun);
         
-        auditService.logAction("PayrollRun", saved.getId(), "AUTHORIZE", authorizedBy, 
-                "status=CHECKED", "status=AUTHORIZED");
+        auditService.logAction("PayrollRun", saved.getId(), "AUTHORIZE_AND_PROCESS", authorizedBy, 
+                "status=CHECKED", "status=PROCESSED");
         
-        log.info("Payroll {} authorized by {}", action.getPayrollRunId(), authorizedBy);
+        log.info("Payroll {} authorized and processed by {}", action.getPayrollRunId(), authorizedBy);
         return mapToDTO(saved);
     }
 
