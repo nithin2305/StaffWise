@@ -175,8 +175,8 @@ import { PayrollRun, PayrollDetail } from '../../../core/models';
                 <span class="material-icons">check_circle</span>
               </div>
               <h3>Payroll Processed Successfully!</h3>
-              <p>Payroll for {{ getMonthName(processedRun()!.month) }} {{ processedRun()!.year }} has been approved and processed.</p>
-              <p class="amount">{{ (processedRun()!.totalNetPay || processedRun()!.totalNet) | currency:'INR':'symbol':'1.0-0' }}</p>
+              <p>Fortnightly payroll has been approved and processed.</p>
+              <p class="amount">K{{ (processedRun()!.totalNetPay || processedRun()!.totalNet) | number:'1.0-0' }}</p>
               <p class="employees">{{ processedRun()!.totalEmployees }} employees paid</p>
               <button class="btn btn-primary" (click)="closeSuccessModal()">Done</button>
             </div>

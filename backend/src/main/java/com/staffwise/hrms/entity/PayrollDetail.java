@@ -190,14 +190,9 @@ public class PayrollDetail extends BaseEntity {
      * Calculate all totals for PNG payroll
      */
     public void calculateTotals() {
-        // Calculate gross salary (all earnings)
+        // Calculate gross salary (all earnings) - use housingAllowance, ignore legacy hra
         this.grossSalary = basicSalary + housingAllowance + transportAllowance + mealAllowance 
                          + specialAllowance + overtimePay + bonus + leaveLoading;
-        
-        // Map legacy HRA to housing allowance
-        if (hra != null && hra > 0) {
-            this.grossSalary += hra;
-        }
         
         // For backwards compatibility
         this.taxDeduction = salaryWagesTax;
